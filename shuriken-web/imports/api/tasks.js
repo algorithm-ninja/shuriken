@@ -1,5 +1,6 @@
+'use strict';
+
 import { Mongo } from 'meteor/mongo';
-const kue = require('kue');
 
 export const Tasks = new Mongo.Collection('tasks');
 

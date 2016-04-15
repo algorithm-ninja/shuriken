@@ -2,9 +2,9 @@
   <h1>{{currentTask.name}} (<tt>{{currentTask.codename}}</tt>)</h1>
   <hr>
 
-  {{> newSubmission }}
-  <h2>Your past submissions</h2>
+  {{> newSubmission}}
+  <h3>Your past submissions</h3>
   {{#each evaluationsForTask}}
-    {{> evaluation }}
+    {{> evaluation}}
   {{/each}}
 </template>

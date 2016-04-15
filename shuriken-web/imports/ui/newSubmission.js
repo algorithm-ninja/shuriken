@@ -1,3 +1,5 @@
+'use strict';
+
 import './newSubmission.html';
 
 Template.newSubmission.events({
@@ -8,5 +10,6 @@ Template.newSubmission.events({
     const taskId = this.currentTask._id._str;
 
     Meteor.call('evaluations.enqueue', taskId, null);
+    Router.go('/task/submissions/' + this.currentTask.codename);
   },
 });

@@ -1,8 +1,10 @@
+'use strict';
+
 import { Template } from 'meteor/templating';
 import { Tasks } from '../api/tasks.js';
 
 import './body.html';
-import './sidebar.js'
+import './sidebar.js';
 import './taskSubmissionPage.js';
 import './taskStatementPage.js';
 

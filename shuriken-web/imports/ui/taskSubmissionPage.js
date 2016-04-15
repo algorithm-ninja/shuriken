@@ -1,3 +1,5 @@
+'use strict';
+
 import { Evaluations } from '../api/evaluations.js';
 
 import './evaluation.js';

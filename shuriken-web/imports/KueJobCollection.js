@@ -1,20 +1,31 @@
+'use strict';
+
 const kue = require('kue');
 
 export const KueJobCollection = function(Collection) {
   this._monitoredJobs = {};
   this._collection = Collection;
 
+  this._exportKueData = (jobData) => {
+    //IDEA: prefix all fields from Kue with a recognizable prefix (such as
+    //      'kue'. Furthermore, it would be nice to have them camelCase.
+    //FIXME: we should filter the data, as it is not worth to have some of the
+    //       fields in the Mongo collection.
+    return jobData;
+  };
+
   this._updateJobData =  (kueJobId) => {
+    let self = this;
+
     if (!(kueJobId in this._monitoredJobs)) {
-      console.error("WTF");
       return;
     }
     kue.Job.get(kueJobId, Meteor.bindEnvironment(function(err, job) {
       if (!err) {
         Collection.update(
           {id: kueJobId},
-          {$set: job.toJSON()},
-          {upsert: true},
+          {$set: self._exportKueData(job.toJSON())},
+          {upsert: true}
         );
       } else {
         console.error(err);
@@ -23,7 +34,7 @@ export const KueJobCollection = function(Collection) {
   };
 
   this.watchJob = (kueJobId) => {
-    var self = this;
+    let self = this;
 
     if (!(kueJobId in this._monitoredJobs)) {
       console.log('[KueJobCollection] Watch new Kue job ' + kueJobId);
@@ -34,7 +45,8 @@ export const KueJobCollection = function(Collection) {
 
           // Subscribe to Redis events via Kue.
           job.subscribe(() => {});
-          job.on('change', Meteor.bindEnvironment(() => { self._updateJobData(kueJobId) }));
+          job.on('change',
+              Meteor.bindEnvironment(() => { self._updateJobData(kueJobId); }));
         } else {
           console.error(err);
         }
@@ -46,25 +58,26 @@ export const KueJobCollection = function(Collection) {
   };
 
   this.insertJob = (data, job) => {
-    var self = this;
+    let self = this;
 
     if (!data) {
       data = {};
     }
     if ('id' in data) {
-      throw new error('id cannot be a key of data in KueJobCollection.insertJob');
+      throw new Error(
+          'id cannot be a key of data in KueJobCollection.insertJob');
     }
 
     data.id = null;
     let taskId = Collection.insert(data);
 
     if (Meteor.isServer) {
-      job.on('enqueue', Meteor.bindEnvironment(function(type) {
+      job.on('enqueue', Meteor.bindEnvironment(function() {
         Collection.update(taskId, { $set: { id: job.id } });
         self.watchJob(job.id);
       })).save();
     }
 
     return taskId;
-  }
+  };
 };

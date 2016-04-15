@@ -1,5 +1,6 @@
+'use strict';
+
 import { Template } from 'meteor/templating';
-import { Submissions } from '../api/evaluations.js';
 
 import './evaluation.html';
 const moment = require('moment');
@@ -8,12 +9,20 @@ Template.evaluation.onCreated(function(){
   if (this.data.id) {
     Meteor.call('evaluations.watchKueJob', this.data.id);
   }
+
+  //FIXME: if a task has an unreasonable number of submissions, subscribing
+  //       to the whole collection without limit can be a bad idea. In the future,
+  //       consider using a pagination system, such as
+  //       https://atmospherejs.com/percolate/paginated-subscription.
   Meteor.subscribe('Evaluations');
 });
 
 Template.evaluation.helpers({
   'humanEvaluationDateTime'() {
     if (this.created_at) {
+      //IDEA: in the future, use fromNow() instead of printing the absolute
+      //      dateTime. In order for this to work reactively, .fromNow() should
+      //      invalidate the template on change, via Tracker.
       return moment(+this.created_at).local().format('D MMM YYYY, HH:mm:ss');
     } else {
       return 'Unknown';
@@ -55,15 +64,15 @@ Template.evaluation.helpers({
     if (this.state) {
       switch (this.state) {
         case 'inactive':
-          return "#7f7f7f";
+          return '#7f7f7f';
         case 'active':
-          return "#03a9f4";
+          return '#03a9f4';
         case 'failed':
-          return "#7f7f7f";
+          return '#7f7f7f';
         case 'complete':
-          return "#4caf50"
+          return '#4caf50'
       }
-      return "#7f7f7f";
+      return '#7f7f7f';
     }
   }
 });

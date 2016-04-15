@@ -1,3 +1,5 @@
+'use strict';
+
 import { Mongo } from 'meteor/mongo';
 import { KueJobCollection } from '../KueJobCollection.js';
 
@@ -6,7 +8,7 @@ const kue = require('kue');
 export const Evaluations = new Mongo.Collection('evaluations');
 const EvaluationsKueWrapper = new KueJobCollection(Evaluations);
 
-queue = null;
+let queue = null;
 if (Meteor.isServer) {
   queue = kue.createQueue();
 }
