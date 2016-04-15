@@ -1,0 +1,10 @@
+<template name="taskSubmissionPage">
+  <h1>{{currentTask.name}} (<tt>{{currentTask.codename}}</tt>)</h1>
+  <hr>
+
+  {{> newSubmission }}
+  <h2>Your past submissions</h2>
+  {{#each evaluationsForTask}}
+    {{> evaluation }}
+  {{/each}}
+</template>

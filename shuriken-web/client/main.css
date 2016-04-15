@@ -1,0 +1,72 @@
+.border-between > [class*='col-']:after {
+ background: #e3e3e3;
+ bottom: 0;
+ content: " ";
+ right: 0;
+ position: absolute;
+ width: 1px;
+ top: 0;
+}
+.border-between > [class*='col-']:last-child:after {
+ display: none;
+}
+.border-between > [class*='col-']:before {
+ background: #e3e3e3;
+ bottom: 0;
+ content: " ";
+ left: -1px;
+ position: absolute;
+ width: 1px;
+ top: 0;
+}
+.border-between > [class*='col-']:first-child:before {
+ display: none;
+}
+
+.nopadding {
+  padding: 0 !important;
+}
+.nomargin {
+  margin: 0 !important;
+}
+
+.panel-title {
+  text-transform: uppercase;
+  font-weight: 300;
+  text-shadow: 0px -1px 1px rgba(0,0,0,.1);
+}
+
+.panel, .panel-heading, .panel-body {
+  border-radius: 0;
+}
+
+.list-group.framed .list-group-item {
+  border-bottom: 1px solid lightgray;
+}
+
+.list-group-item {
+  margin-bottom: 0 !important;
+}
+
+.list-group-item.task-link {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+hr {
+  border-color: #aaa;
+}
+
+a.task-link .list-group-item-heading {
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 15px !important;
+  line-height: 15px !important;
+  color: gray !important;
+  font-family: monospace;
+}
+
+.padding-ns {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}

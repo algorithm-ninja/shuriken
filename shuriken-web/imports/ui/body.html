@@ -1,0 +1,31 @@
+<template name="loggedLayout">
+  <header>
+    <div class="navbar">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand">
+            Shuriken
+          </a>
+        </div>
+        <div>
+          {{> loginButtons }}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-3">
+        {{> tasklist }}
+      </div>
+      <div class="col-md-9">
+        {{> yield}}
+      </div>
+    </div>
+  </div>
+</template>
+
+<template name="notFound">
+  <h1>404 - Not Found</h1>
+</template>

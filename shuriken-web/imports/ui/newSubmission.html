@@ -1,0 +1,27 @@
+<template name="newSubmission">
+  <div class="panel panel-primary">
+    <div class="panel-heading panel-title">
+      New submission
+    </div>
+    <div class="panel-body nopadding">
+      <div class="row nomargin">
+        <div class="col-md-1 nomargin nopadding" style="background-color: rgba(0,150,136,.8); text-align: center;">
+          <i class="material-icons" style="
+  color: rgba(255,255,255,.6);
+  font-size: 45px;
+  line-height: 80px;
+  vertical-align: middle;
+  height: 80px;">add_circle</i>
+        </div>
+        <div class="col-md-11 nomargin padding-ns">
+          <a class="submit-submission btn btn-raised">
+            Submit
+          </a>
+          <a href="/task/submissions/{{currentTask.codename}}" class="btn btn-info">
+            Past submissions
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
