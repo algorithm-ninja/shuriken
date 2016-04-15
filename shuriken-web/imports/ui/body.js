@@ -13,41 +13,47 @@ Template.registerHelper('equals', function (a, b) {
 });
 
 Router.route('/', function () {
-  this.layout('loggedLayout');
-  this.render('notFound');
-});
-
-Router.route('/dummy', function () {
-  this.layout('loggedLayout');
-  this.render('notFound');
+  if (Meteor.userId()) {
+    this.layout('loggedLayout');
+  } else {
+    this.render('loginPage');
+  }
 });
 
 Router.route('/task/statement/:codename', function () {
-  this.layout('loggedLayout');
-  let codename = this.params.codename;
-  let taskObj = Tasks.findOne({codename: codename});
+  if (Meteor.userId()) {
+    this.layout('loggedLayout');
+    let codename = this.params.codename;
+    let taskObj = Tasks.findOne({codename: codename});
 
-  if (taskObj) {
-    this.render('taskStatementPage', {
-      data: {
-        currentTask: taskObj,
-    }});
+    if (taskObj) {
+      this.render('taskStatementPage', {
+        data: {
+          currentTask: taskObj,
+      }});
+    } else {
+      this.render('notFound');
+    }
   } else {
-    this.render('notFound');
+    this.render('loginPage');
   }
 });
 
 Router.route('/task/submissions/:codename', function () {
-  this.layout('loggedLayout');
-  let codename = this.params.codename;
-  let taskObj = Tasks.findOne({codename: codename});
+  if (Meteor.userId()) {
+    this.layout('loggedLayout');
+    let codename = this.params.codename;
+    let taskObj = Tasks.findOne({codename: codename});
 
-  if (taskObj) {
-    this.render('taskSubmissionPage', {
-      data: {
-        currentTask: taskObj,
-    }});
+    if (taskObj) {
+      this.render('taskSubmissionPage', {
+        data: {
+          currentTask: taskObj,
+      }});
+    } else {
+      this.render('notFound');
+    }
   } else {
-    this.render('notFound');
+    this.render('loginPage');
   }
 });
