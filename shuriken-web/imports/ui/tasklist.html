@@ -1,12 +1,9 @@
 <template name="tasklist">
-  <div>
-    <h3>Available tasks</h3>
-    <div class = "panel">
-      <div class="list-group framed">
-        {{#each tasks}}
-          {{> task }}
-        {{/each}}
-      </div>
+  <div class = "panel">
+    <div class="list-group framed">
+      {{#each tasks}}
+        {{> task}}
+      {{/each}}
     </div>
   </div>
 </template>
@@ -14,7 +11,7 @@
 <template name="task">
   <a href="/task/statement/{{codename}}" class="list-group-item task-link">
     <div>
-      <h4 class="list-group-item-heading">{{ codename }}</h4>
+      <h4 class="list-group-item-heading">{{codename}}</h4>
       <p class="list-group-item-text">Some text here</p>
     </div>
   </a>

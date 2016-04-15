@@ -2,7 +2,7 @@ import { Template } from 'meteor/templating';
 import { Tasks } from '../api/tasks.js';
 
 import './body.html';
-import './tasklist.js'
+import './sidebar.js'
 import './taskSubmissionPage.js';
 import './taskStatementPage.js';
 

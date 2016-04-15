@@ -70,3 +70,7 @@ a.task-link .list-group-item-heading {
   padding-top: 10px;
   padding-bottom: 10px;
 }
+
+.navbar {
+  background-color: #315669;
+}
