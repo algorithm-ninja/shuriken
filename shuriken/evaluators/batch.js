@@ -1,27 +1,23 @@
 var argv = require('minimist')(process.argv.slice(2));
 var util = require('util');
 var path = require('path');
+var Evaluator = require('./base.js');
 
-var kue = require('kue');
-var queue = kue.createQueue();
+class Batch extends Evaluator {
+  constructor(testcasePrefix, inputSchema, outputSchema, numInput, checkerFilename) {
+    super();
+    this.testcasePrefix = testcasePrefix;
+    this.inputSchema = inputSchema;
+    this.outputSchema = outputSchema;
+    this.numInput = numInput;
+    if (checkerFilename) {
+      this.checkerFilename = path.resolve(checkerFilename);
+    } else {
+      this.checkerFilename = checkerFilename;
+    }
+  }
 
-var testcasePrefix = argv['prefix'];
-var inputSchema = argv['input'];
-var outputSchema = argv['output'];
-var numInput = argv['num'];
-var checkerFilename = argv['checker'];
-
-if (checkerFilename) {
-  checkerFilename = path.resolve(checkerFilename);
-}
-
-queue.process('evaluate', function(job, done) {
-  console.log("Took job: ");
-  console.log(job);
-  
-  var jobs_done = {};
-
-  var updateProgressUpstream = function() {
+  updateProgressUpstream() {
     var cnt = 0;
     for (var i = 0; i < numInput; ++i) {
       if (jobs_done[i]) {
@@ -32,25 +28,16 @@ queue.process('evaluate', function(job, done) {
     if (cnt == job.data.num) {
       done(null, 'Done all jobs!');
     }
-  };
+  }
 
-  var enqueueSubjob = function(id) {
-    queue.create('subjob', {
+  getJob() {
+    return {
       'sourceFilename': job.data.sourceFilename,
       'inputFilename': path.join(testcasePrefix, util.format(inputSchema, id)),
       'outputFilename': path.join(testcasePrefix, util.format(outputSchema, id)),
       'checkerFilename': checkerFilename,
-    }).on('complete', function() {
-      if (!jobs_done[id]) {
-        console.log('Job ' + id + ' completed');
-        jobs_done[id] = true;
-        updateProgressUpstream();
-      }
-    }).save();
-  };
-
-  for (var i = 0; i < numInput; ++i) {
-    jobs_done[i] = false;
-    enqueueSubjob(i);
+    };
   }
-});
+}
+
+new Batch(argv['prefix'], argv['input'], argv['output'], argv['num'], argv['checker']).run();
