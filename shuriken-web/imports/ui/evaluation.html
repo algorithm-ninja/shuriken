@@ -7,7 +7,7 @@
     <div class="panel-body nopadding">
       <div class="row border-between nomargin">
         <div class="col-md-9 evaluation-progress nopadding">
-          {{> progressData progress_data}}
+          {{{ progress_data }}}
         </div>
         <div class="col-md-3 nopadding" style="text-align: center;">
           <div style="padding:3px 10px">
@@ -17,28 +17,4 @@
       </div>
     </div>
   </div>
-</template>
-
-<template name="progressData">
-  <table class="table nomargin">
-    <tbody>
-      {{#each this}}
-        <tr>
-          <td>Testcase</td>
-          <td>Output is correct</td>
-          <td style="width: 50px; text-align: center;">
-            <span style="display: inline-block;
-    width: 100%;
-    height: 20px;
-    line-height: 20px;
-    border-radius: 5px;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-    color: white;
-    background-color: #ccc;">{{this}}</span>
-          </td>
-        </tr>
-      {{/each}}
-    </tbody>
-  </table>
 </template>

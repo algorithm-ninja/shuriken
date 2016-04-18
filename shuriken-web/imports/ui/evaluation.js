@@ -70,7 +70,7 @@ Template.evaluation.helpers({
         case 'failed':
           return '#7f7f7f';
         case 'complete':
-          return '#4caf50'
+          return '#4caf50';
       }
       return '#7f7f7f';
     }
