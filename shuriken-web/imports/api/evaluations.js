@@ -30,7 +30,15 @@ Meteor.methods({
   'evaluations.enqueue'(taskId, submissionContent) {
     if (Meteor.isServer) {
       const queueName = 'evaluation';
-      let job = queue.create(queueName, {});
+
+      //FIXME This is hardcoded just as a placeholder.
+      let job = queue.create(queueName, {
+        submissionFileUri: '',
+        tcInputFileUriSchema: '',
+        tcOutputFileUriSchema: '',
+        evaluationStructure: [2, 3, 2],
+
+      });
       EvaluationsKueWrapper.insertJob({
         owner: Meteor.userId(),
         taskId: taskId,

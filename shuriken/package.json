@@ -1,0 +1,10 @@
+{
+  "name": "shuriken",
+  "private": true,
+  "dependencies": {
+    "hiredis": "^0.4.1",
+    "kue": "algorithm-ninja/kue#events",
+    "lodash": "^4.11.1",
+    "mustache": "^2.2.1"
+  }
+}
