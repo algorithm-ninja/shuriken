@@ -2,10 +2,10 @@
 
 const kue = require('kue');
 const queue = kue.createQueue();
-const assert = require('assert');
 const _ = require('lodash');
 const mustache = require('mustache');
 const domain = require('domain');
+const should = require('should');
 
 /**
  * BatchEvaluator
@@ -129,52 +129,60 @@ class BatchEvaluator {
 
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
-    const jobConfig = job.data;
-    assert(_.isObject(jobConfig));
+    this._config = job.data;
+    this._config.should.be.Object();
 
     // Step 1. Check all mandatory fields are there.
-    assert(_.has(jobConfig, 'submissionFileUri'));
-    assert(_.has(jobConfig, 'tcInputFileUriSchema'));
-    assert(_.has(jobConfig, 'tcOutputFileUriSchema'));
-    assert(_.has(jobConfig, 'evaluationStructure'));
-    assert(_.has(jobConfig, 'timeLimit'));
-    assert(_.has(jobConfig, 'memoryLimit'));
+    this._config
+        .should.have.properties('submissionFileUri')
+        .and.have.properties('tcInputFileUriSchema')
+        .and.have.properties('tcOutputFileUriSchema')
+        .and.have.properties('evaluationStructure')
+        .and.have.properties('timeLimit')
+        .and.have.properties('memoryLimit');
 
-    // Step 2. For each field, assert values are feasible.
-    this.submissionFileUri = jobConfig.submissionFileUri;
-    assert(_.isString(this.submissionFileUri));
+    // Step 2. Set all non mandatory fields to the default values.
+    this._config.checkerSourceUri =
+        _.get(this._config, 'checkerSourceUri', null);
+    this._config.intraSubtaskAggregation =
+        _.get(this._config, 'intraSubtaskAggregation', 'sum');
+    this._config.interSubtaskAggregation =
+        _.get(this._config, 'interSubtaskAggregation', 'sum');
 
-    this.tcInputFileUriSchema = jobConfig.tcInputFileUriSchema;
-    assert(_.isString(this.tcInputFileUriSchema));
+    // Step 3. For each field, check values are feasible.
+    this._config.submissionFileUri
+        .should.be.String();
 
-    this.tcOutputFileUriSchema = jobConfig.tcOutputFileUriSchema;
-    assert(_.isString(this.tcOutputFileUriSchema));
+    this._config.tcInputFileUriSchema
+        .should.be.String();
 
-    this.timeLimit = jobConfig.timeLimit;
-    assert(_.isFinite(this.timeLimit) && this.timeLimit > 0);
+    this._config.tcOutputFileUriSchema
+        .should.be.String();
 
-    this.memoryLimit = jobConfig.memoryLimit;
-    assert(_.isFinite(this.memoryLimit) && this.memoryLimit > 0);
+    if (this._config.checkerSourceUri) {
+      this._config.checkerSourceUri
+          .should.be.String();
+    }
 
-    this.evaluationStructure = jobConfig.evaluationStructure;
-    assert(_.isArray(this.evaluationStructure));
-    _.each(this.evaluationStructure, (num) => {
-      assert(_.isInteger(num));
-    });
+    this._config.timeLimit
+        .should.be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
 
-    this.checkerSourceUri = _.get(jobConfig, 'checkerSourceUri', null);
-    assert(_.isNull(this.checkerSourceUri) ||
-        _.isString(this.checkerSourceUri));
+    this._config.memoryLimit
+        .should.be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
 
-    this.intraSubtaskAggregation = _.get(jobConfig, 'intraSubtaskAggregation',
-                                         'sum');
-    assert(_.indexOf(['sum', 'min', 'max'], this.intraSubtaskAggregation) >= 0);
+    this._config.intraSubtaskAggregation
+        .should.be.String()
+        .and.equalOneOf('sum', 'min', 'max');
 
-    this.interSubtaskAggregation = _.get(jobConfig, 'interSubtaskAggregation',
-                                         'sum');
-    assert(_.indexOf(['sum', 'min', 'max'], this.interSubtaskAggregation) >= 0);
+    this._config.interSubtaskAggregation
+        .should.be.String()
+        .and.equalOneOf('sum', 'min', 'max');
 
-    assert(this._validateUris());
+    this._validateUris().should.be.true();
   }
 
   /**
@@ -196,9 +204,11 @@ class BatchEvaluator {
    * @return {bool} Whether all testcase jobs have finished.
    */
   _allTestcasesHaveFinished() {
-    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
-         ++subtaskIndex) {
-      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+    for (let subtaskIndex = 1;
+        subtaskIndex <= this._config.evaluationStructure.length;
+        ++subtaskIndex) {
+      const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
 
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
@@ -219,9 +229,11 @@ class BatchEvaluator {
    * @return {bool} True iff at least one testcase evaluation has failed.
    */
    _someTestcaseFailed() {
-     for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
-          ++subtaskIndex) {
-       let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+     for (let subtaskIndex = 1;
+         subtaskIndex <= this._config.evaluationStructure.length;
+         ++subtaskIndex) {
+       const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
 
        for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
             ++testcaseIndex) {
@@ -311,9 +323,11 @@ class BatchEvaluator {
 
     s +=  `<table class="table nomargin">\n`;
     s += `  <tbody>\n`;
-    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
+    for (let subtaskIndex = 1;
+         subtaskIndex <= this._config.evaluationStructure.length;
          ++subtaskIndex) {
-      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+      const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
       s += '    <tr class="subtask"><td colspan="2">Subtask ';
       s += subtaskIndex + '</td><td></td></tr>\n';
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -343,14 +357,16 @@ class BatchEvaluator {
       'sum': function(a, b) { return a + b; },
     };
     const intraSubtaskLambda =
-        aggregationFunctions[this.intraSubtaskAggregation];
+        aggregationFunctions[this._config.intraSubtaskAggregation];
     const interSubtaskLambda =
-        aggregationFunctions[this.interSubtaskAggregation];
+        aggregationFunctions[this._config.interSubtaskAggregation];
 
     let score = 0;
-    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
-         ++subtaskIndex) {
-      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+    for (let subtaskIndex = 1;
+        subtaskIndex <= this._config.evaluationStructure.length;
+        ++subtaskIndex) {
+      const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
 
       let subtaskScore = 0;
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -405,10 +421,11 @@ class BatchEvaluator {
    */
   _updateTestcaseProgress(subtaskIndex, testcaseIndex, progress,
                           preventUpdate) {
-    assert(_.isInteger(subtaskIndex) && _.isInteger(testcaseIndex));
-    assert(_.has(progress, 'state'));
-    assert(_.has(progress, 'score'));
-    assert(_.has(progress, 'message'));
+    progress
+        .should.be.Object()
+        .and.have.properties('state')
+        .and.have.properties('score')
+        .and.have.properties('message');
 
     this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex] = progress;
     if (!preventUpdate) {
@@ -423,9 +440,11 @@ class BatchEvaluator {
    */
   _initTestcaseStructure() {
     this._testcaseEvaluationProgress = {};
-    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
-         ++subtaskIndex) {
-      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+    for (let subtaskIndex = 1;
+        subtaskIndex <= this._config.evaluationStructure.length;
+        ++subtaskIndex) {
+      const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
 
       this._testcaseEvaluationProgress[subtaskIndex] = {};
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -460,9 +479,16 @@ class BatchEvaluator {
 
     queue.create('subjob', testcaseEvaluationConfiguration)
       .on('complete', function(result) {
-        assert(_.isObject(result));
-        assert(_.has(result, 'score'));
-        assert(_.has(result, 'message'));
+        result
+            .should.be.Object()
+            .and.have.properties('score')
+            .and.have.properties('message');
+        result.score
+            .should.be.Number()
+            .and.not.be.Infinity()
+            .and.be.aboveOrEqual(0);
+        result.message
+            .should.be.String();
 
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'complete',
@@ -483,11 +509,13 @@ class BatchEvaluator {
    * Main entry point. Evaluate the submission.
    */
   run() {
-    this._initTestcaseStructure(this.evaluationStructure);
+    this._initTestcaseStructure(this._config.evaluationStructure);
 
-    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
-         ++subtaskIndex) {
-      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+    for (let subtaskIndex = 1;
+        subtaskIndex <= this._config.evaluationStructure.length;
+        ++subtaskIndex) {
+      const nTestcasesForSubtask =
+          this._config.evaluationStructure[subtaskIndex - 1];
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
         this._enqueueTestcase(subtaskIndex, testcaseIndex, {});

@@ -7,6 +7,7 @@
     "kue": "algorithm-ninja/kue#events",
     "lodash": "^4.11.1",
     "mustache": "^2.2.1",
+    "should": "^8.3.1",
     "temp": "^0.8.3"
   }
 }
