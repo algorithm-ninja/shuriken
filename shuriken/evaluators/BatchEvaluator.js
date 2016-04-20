@@ -348,7 +348,10 @@ class BatchEvaluator {
    * and return the score for the current evaluations.
    *
    * @private
-   * @return {float} The score for the current evaluation.
+   * @return {Object} An object containing two fiels:
+   *             - `score` The score for the current evaluation
+   *             - `maxScore` The score of the submassion if all testcases were
+   *                    given a score of 1.0.
    */
   _calculateScore() {
     const aggregationFunctions = {
@@ -361,33 +364,37 @@ class BatchEvaluator {
     const interSubtaskLambda =
         aggregationFunctions[this._config.interSubtaskAggregation];
 
-    let score = 0;
+    let score = 0, maxScore = 0;
     for (let subtaskIndex = 1;
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
       const nTestcasesForSubtask =
           this._config.evaluationStructure[subtaskIndex - 1];
 
-      let subtaskScore = 0;
+      let subtaskScore = 0, maxSubtaskScore = 0;
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
         const testcaseScore =
             this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex].score;
         if (testcaseIndex === 1) {
           subtaskScore = testcaseScore;
+          maxSubtaskScore = 1.0;
         } else {
           subtaskScore = intraSubtaskLambda(subtaskScore, testcaseScore);
+          maxSubtaskScore = intraSubtaskLambda(maxSubtaskScore, 1.0);
         }
       }
 
       if (subtaskIndex === 1) {
         score = subtaskScore;
+        maxScore = subtaskScore;
       } else {
         score = interSubtaskLambda(score, subtaskScore);
+        maxScore = interSubtaskLambda(maxScore, subtaskScore);
       }
     }
 
-    return score;
+    return {'score': score, 'maxScore': maxScore};
   }
 
   /**
@@ -403,8 +410,7 @@ class BatchEvaluator {
         //TODO: Return (more) meaningful error
         this.doneCallback('some testcases failed', {});
       } else {
-        const score = this._calculateScore();
-        this.doneCallback(null, {'score': score});
+        this.doneCallback(null, this._calculateScore());
       }
     }
   }
@@ -486,7 +492,8 @@ class BatchEvaluator {
         result.score
             .should.be.Number()
             .and.not.be.Infinity()
-            .and.be.aboveOrEqual(0);
+            .and.be.aboveOrEqual(0)
+            .and.be.belowOrEqual(1);
         result.message
             .should.be.String();
 

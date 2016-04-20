@@ -45,7 +45,8 @@ Template.evaluation.helpers({
           return 'Evaluation failed';
         case 'complete':
           const score = _.get(this.result, 'score', undefined);
-          return 'Evaluated (score: ' + score + ')';
+          const maxScore = _.get(this.result, 'maxScore', undefined);
+          return 'Evaluated (score: ' + score + '/' + maxScore + ')';
         default:
           return this.state;
       }
