@@ -238,20 +238,21 @@ class BatchEvaluator {
     let s = `
       <style>
         td.tc-score {
-          width: 50px;
+          width: 55px;
         }
 
         td.tc-score span {
           display: inline-block;
-          width: 100%;
           height: 20px;
           line-height: 20px;
           border-radius: 5px;
           -moz-box-sizing: border-box;
           box-sizing: border-box;
           color: white;
-          background-color: #ccc;
+          background-color: #ddd;
           text-align: center;
+          padding: 0 5px;
+          min-width: 35px;
         }
 
         td.tc-index {
@@ -259,7 +260,7 @@ class BatchEvaluator {
         }
 
         tr.subtask {
-          background-color: #f0f0f0;
+          background-color: #eee;
           text-transform: uppercase;
         }
 
@@ -283,7 +284,7 @@ class BatchEvaluator {
           break;
         case 'complete':
           message = testcaseEvaluationProgress.message;
-          score = testcaseEvaluationProgress.score;
+          score = testcaseEvaluationProgress.score.toFixed(2);
           break;
       }
 
