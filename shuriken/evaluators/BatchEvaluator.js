@@ -141,39 +141,31 @@ class BatchEvaluator {
     assert(_.has(jobConfig, 'memoryLimit'));
 
     // Step 2. For each field, assert values are feasible.
-    //   2a. submissionFileUri
     this.submissionFileUri = jobConfig.submissionFileUri;
     assert(_.isString(this.submissionFileUri));
 
-    //   2b. tcInputFileUriSchema
     this.tcInputFileUriSchema = jobConfig.tcInputFileUriSchema;
     assert(_.isString(this.tcInputFileUriSchema));
 
-    //   2c. tcOutputFileUriSchema
     this.tcOutputFileUriSchema = jobConfig.tcOutputFileUriSchema;
     assert(_.isString(this.tcOutputFileUriSchema));
 
-    //   2d. timeLimit
     this.timeLimit = jobConfig.timeLimit;
-    assert(_.isFinite(this.timeLimit));
+    assert(_.isFinite(this.timeLimit) && this.timeLimit > 0);
 
-    //   2e. memoryLimit
     this.memoryLimit = jobConfig.memoryLimit;
-    assert(_.isFinite(this.memoryLimit));
+    assert(_.isFinite(this.memoryLimit) && this.memoryLimit > 0);
 
-    //   2f. evaluationStructure
     this.evaluationStructure = jobConfig.evaluationStructure;
     assert(_.isArray(this.evaluationStructure));
     _.each(this.evaluationStructure, (num) => {
       assert(_.isInteger(num));
     });
 
-    //   2g. checkerSourceUri
     this.checkerSourceUri = _.get(jobConfig, 'checkerSourceUri', null);
     assert(_.isNull(this.checkerSourceUri) ||
         _.isString(this.checkerSourceUri));
 
-    //   2h. intraSubtaskAggregation
     this.intraSubtaskAggregation = _.get(jobConfig, 'intraSubtaskAggregation',
                                          'sum');
     assert(_.indexOf(['sum', 'min', 'max'], this.intraSubtaskAggregation) >= 0);
