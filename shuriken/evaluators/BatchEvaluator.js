@@ -62,6 +62,14 @@ const domain = require('domain');
  * |                         | the second one by the testcase      |           |
  * |                         | index.                              |           |
  * +-------------------------+-------------------------------------+-----------+
+ * | timeLimit               | A real number indicating how many   |     Y     |
+ * |                         | seconds the submissionFile may be   |           |
+ * |                         | executed for.                       |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | memoryLimit             | A real number indicating how many   |     Y     |
+ * |                         | MiB are available for the execution |           |
+ * |                         | of submissionFile.                  |           |
+ * +-------------------------+-------------------------------------+-----------+
  * | evaluationStructure     | A list of positive integers. The    |     Y     |
  * |                         | i-th of these integers represents   |           |
  * |                         | N_i, the number of testcases in the |           |
@@ -129,6 +137,8 @@ class BatchEvaluator {
     assert(_.has(jobConfig, 'tcInputFileUriSchema'));
     assert(_.has(jobConfig, 'tcOutputFileUriSchema'));
     assert(_.has(jobConfig, 'evaluationStructure'));
+    assert(_.has(jobConfig, 'timeLimit'));
+    assert(_.has(jobConfig, 'memoryLimit'));
 
     // Step 2. For each field, assert values are feasible.
     //   2a. submissionFileUri
@@ -143,24 +153,32 @@ class BatchEvaluator {
     this.tcOutputFileUriSchema = jobConfig.tcOutputFileUriSchema;
     assert(_.isString(this.tcOutputFileUriSchema));
 
-    //   2d. evaluationStructure
+    //   2d. timeLimit
+    this.timeLimit = jobConfig.timeLimit;
+    assert(_.isFinite(this.timeLimit));
+
+    //   2e. memoryLimit
+    this.memoryLimit = jobConfig.memoryLimit;
+    assert(_.isFinite(this.memoryLimit));
+
+    //   2f. evaluationStructure
     this.evaluationStructure = jobConfig.evaluationStructure;
     assert(_.isArray(this.evaluationStructure));
     _.each(this.evaluationStructure, (num) => {
       assert(_.isInteger(num));
     });
 
-    //   2e. checkerSourceUri
+    //   2g. checkerSourceUri
     this.checkerSourceUri = _.get(jobConfig, 'checkerSourceUri', null);
     assert(_.isNull(this.checkerSourceUri) ||
         _.isString(this.checkerSourceUri));
 
-    //   2f. intraSubtaskAggregation
+    //   2h. intraSubtaskAggregation
     this.intraSubtaskAggregation = _.get(jobConfig, 'intraSubtaskAggregation',
                                          'sum');
     assert(_.indexOf(['sum', 'min', 'max'], this.intraSubtaskAggregation) >= 0);
 
-    //   2g. interSubtaskAggregation
+    //   2i. interSubtaskAggregation
     this.interSubtaskAggregation = _.get(jobConfig, 'interSubtaskAggregation',
                                          'sum');
     assert(_.indexOf(['sum', 'min', 'max'], this.interSubtaskAggregation) >= 0);
