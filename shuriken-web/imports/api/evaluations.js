@@ -37,7 +37,8 @@ Meteor.methods({
         tcInputFileUriSchema: '',
         tcOutputFileUriSchema: '',
         evaluationStructure: [2, 3, 2],
-
+        timeLimit: 1.0,
+        memoryLimit: 256.0,
       });
       EvaluationsKueWrapper.insertJob({
         owner: Meteor.userId(),
