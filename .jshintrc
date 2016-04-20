@@ -73,7 +73,7 @@
       "Tinytest": false,
       // common Meteor packages
       "Random": false,
-      "_": false,               // Underscore.js
+      //"_": false,               // Underscore.js
       "$": false,               // jQuery
       "Router": false           // iron-router
     }

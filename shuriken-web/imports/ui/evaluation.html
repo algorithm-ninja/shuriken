@@ -2,16 +2,20 @@
   <div class="panel panel-info">
     <div class="panel-heading"  style="background-color: {{headingColor}};">
       <span class="panel-title">{{humanState}}</span>
-      <span class="pull-right">{{ humanEvaluationDateTime }}</span>
+      <span class="pull-right">{{humanEvaluationDateTime}}</span>
     </div>
     <div class="panel-body nopadding">
       <div class="row border-between nomargin">
-        <div class="col-md-9 evaluation-progress nopadding">
+        <div class="col-md-7 evaluation-progress nopadding">
           {{{ progress_data }}}
         </div>
-        <div class="col-md-3 nopadding" style="text-align: center;">
-          <div style="padding:3px 10px">
-            <div class="btn btn-raised btn-sm"><i class="material-icons">code</i> Show code</div>
+        <div class="col-md-5 nopadding">
+          <div style="padding:3px 10px;">
+            <!--<div class="btn btn-raised btn-sm"><i class="material-icons">code</i> Show code</div>-->
+            <h4>Job configuration:</h4>
+            <div style="font-family: monospace; white-space: pre;">
+{{jobConfiguration}}
+            </div>
           </div>
         </div>
       </div>

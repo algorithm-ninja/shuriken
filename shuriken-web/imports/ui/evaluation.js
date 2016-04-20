@@ -4,6 +4,7 @@ import { Template } from 'meteor/templating';
 
 import './evaluation.html';
 const moment = require('moment');
+const _ = require('lodash');
 
 Template.evaluation.onCreated(function(){
   if (this.data.id) {
@@ -18,6 +19,10 @@ Template.evaluation.onCreated(function(){
 });
 
 Template.evaluation.helpers({
+  'jobConfiguration'() {
+    return JSON.stringify(this.data, null, 2);
+  },
+
   'humanEvaluationDateTime'() {
     if (this.created_at) {
       //IDEA: in the future, use fromNow() instead of printing the absolute
@@ -39,7 +44,8 @@ Template.evaluation.helpers({
         case 'failed':
           return 'Evaluation failed';
         case 'complete':
-          return 'Evaluated';
+          const score = _.get(this.result, 'score', undefined);
+          return 'Evaluated (score: ' + score + ')';
         default:
           return this.state;
       }

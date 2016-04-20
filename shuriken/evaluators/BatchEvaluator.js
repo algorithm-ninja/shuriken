@@ -118,7 +118,7 @@ class BatchEvaluator {
    * Receive a link to the Kue Job and the callback to inform the queue manager
    * that the evaluation has finished.
    *
-   * @param {!Object} job The current Kue Job.s
+   * @param {!Object} job The current Kue Job.
    * @param {function} doneCallback Callback to inform the queue manager that
    *                       the evaluation has finished.
    * @constructor
@@ -170,7 +170,6 @@ class BatchEvaluator {
                                          'sum');
     assert(_.indexOf(['sum', 'min', 'max'], this.intraSubtaskAggregation) >= 0);
 
-    //   2i. interSubtaskAggregation
     this.interSubtaskAggregation = _.get(jobConfig, 'interSubtaskAggregation',
                                          'sum');
     assert(_.indexOf(['sum', 'min', 'max'], this.interSubtaskAggregation) >= 0);
@@ -331,7 +330,52 @@ class BatchEvaluator {
   }
 
   /**
-   * Update the progress of the current evaluation job upstream, using Kue.
+   * Aggregates testcases and subtasks using the specified aggregation methods
+   * and return the score for the current evaluations.
+   *
+   * @private
+   * @return {float} The score for the current evaluation.
+   */
+  _calculateScore() {
+    const aggregationFunctions = {
+      'max': function(a, b) { return Math.max(a, b); },
+      'min': function(a, b) { return Math.min(a, b); },
+      'sum': function(a, b) { return a + b; },
+    };
+    const intraSubtaskLambda =
+        aggregationFunctions[this.intraSubtaskAggregation];
+    const interSubtaskLambda =
+        aggregationFunctions[this.interSubtaskAggregation];
+
+    let score = 0;
+    for (let subtaskIndex = 1; subtaskIndex <= this.evaluationStructure.length;
+         ++subtaskIndex) {
+      let nTestcasesForSubtask = this.evaluationStructure[subtaskIndex - 1];
+
+      let subtaskScore = 0;
+      for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
+           ++testcaseIndex) {
+        const testcaseScore =
+            this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex].score;
+        if (testcaseIndex === 1) {
+          subtaskScore = testcaseScore;
+        } else {
+          subtaskScore = intraSubtaskLambda(subtaskScore, testcaseScore);
+        }
+      }
+
+      if (subtaskIndex === 1) {
+        score = subtaskScore;
+      } else {
+        score = interSubtaskLambda(score, subtaskScore);
+      }
+    }
+
+    return score;
+  }
+
+  /**
+   * Updates the progress of the current evaluation job upstream, using Kue.
    *
    * @private
    */
@@ -340,11 +384,11 @@ class BatchEvaluator {
 
     if (this._allTestcasesHaveFinished()) {
       if (this._someTestcaseFailed()) {
-        //TODO: Return meaningful error
+        //TODO: Return (more) meaningful error
         this.doneCallback('some testcases failed', {});
       } else {
-        //TODO: Calculate score
-        this.doneCallback(null, {});
+        const score = this._calculateScore();
+        this.doneCallback(null, {'score': score});
       }
     }
   }
