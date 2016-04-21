@@ -43,9 +43,9 @@ const _ = require('lodash');
  * |                         | we support the following languages: |           |
  * |                         | - 'GCC_C                            |           |
  * |                         | - 'GCC_CXX'                         |           |
- * |                         | - 'JAVA'                            |           |
- * |                         | - 'PYTHON3'                         |           |
- * |                         | - 'CSHARP'                          |           |
+ * |                         | - 'JDK_JAVA'                        |           |
+ * |                         | - 'CPYTHON_PYTHON3'                 |           |
+ * |                         | - 'MONO_CSHARP'                     |           |
  * +-------------------------+-------------------------------------+-----------+
  * | graderSourceUri         | URI of the grader file.             |     N     |
  * +-------------------------+-------------------------------------+-----------+
@@ -54,6 +54,15 @@ const _ = require('lodash');
  * | checkerLanguage         | Language for checker. See above for |     N     |
  * |                         | more information.                   |           |
  * +-------------------------+-------------------------------------+-----------+
+ *
+ * Published result
+ * ----------------
+ *
+ * When the evaluation job is finished a score and a message are published.
+ * They are published in the form of an object having the following fields:
+ * - score: a number in [0, 1],
+ * - message: a string.
+ *
 **/
 
 class BatchTestcaseEvaluator {
@@ -66,9 +75,9 @@ class BatchTestcaseEvaluator {
    *                       the evaluation has finished.
    * @constructor
    */
-  constructor(job, done) {
-    this.kueJob = job;
-    this.doneCallback = doneCallback;
+  constructor(job, doneCallback) {
+    this._kueJob = job;
+    this._doneCallback = doneCallback;
 
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
@@ -84,17 +93,24 @@ class BatchTestcaseEvaluator {
         .and.have.properties('memoryLimit');
 
     // Step 2. Set all non mandatory fields to the default values.
-    this._config.submissionLanguage = _.get(this._config, 'submissionLanguage',
-        this._guessLanguageFromFileExtension(this._config.submissionFileUri));
-
-    this._config.checkerLanguage = _.get(this._config, 'checkerLanguage',
-        this._guessLanguageFromFileExtension(this._config.checkerSourceUri));
-
     this._config.graderSourceUri =
         _.get(this._config, 'graderSourceUri', null);
 
     this._config.checkerSourceUri =
         _.get(this._config, 'checkerSourceUri', null);
+
+    this._config.submissionLanguage = _.get(this._config, 'submissionLanguage',
+        this._guessLanguageFromFileExtension(this._config.submissionFileUri));
+
+    this._config.checkerLanguage = _.get(this._config, 'checkerLanguage', null);
+
+    if (!_.isNull(this._config.checkerSourceUri)) {
+      this._config.checkerLanguage.should.be.null();
+    } else {
+      this._config.checkerLanguage = _.get(this._config,
+          'checkerLanguage',
+          this._guessLanguageFromFileExtension(this._config.checkerSourceUri));
+    }
 
     // Step 3. For each field, check values are feasible.
     this._config.submissionFileUri.should.be.String();
@@ -138,6 +154,38 @@ class BatchTestcaseEvaluator {
     this._sandbox = new Sandbox()
         .timeLimit(this._config.timeLimit * 1000.0)
         .memoryLimit(this._config.memoryLimit);
+  }
+
+  /**
+   * Mark the current job as complete and notify Kue of the outcome of the
+   * evaluation.
+   *
+   * @private
+   * @param {Number} score The score (\in [0, 1]) for this submission.
+   * @param {string} message The message.
+   */
+  _publishEvaluation(score, message) {
+    score
+        .should.be.Number()
+        .and.be.within(0, 1);
+    message.should.be.String();
+
+    this._doneCallback(null, {
+        'score': score,
+        'message': message,
+    });
+  }
+
+  /**
+   * Mark the current job as failed, with a custom debug message.
+   *
+   * @private
+   * @param {string} message The debug message.
+   */
+  _fail(message) {
+    message.shold.be.String();
+
+    this._doneCallback(message, {});
   }
 
   /**
@@ -319,14 +367,12 @@ class BatchTestcaseEvaluator {
   run() {
     // Compile contestant solution.
     let status = this._compileFile(this._config.submissionFileUri,
-        this._config.this._config.graderFileUri,
+        this._config.this._config.graderSourceUri,
         this._config.submissionLanguage);
 
     if (status.status) {
-      this.done({
-          score: 0.0,
-          message: 'Compilation error, exit code ' + status.status});
-      return;
+      return this._publishEvaluation(0.0,
+          'Compilation error, exit code ' + status.status);
     }
 
     // Run contestant solution.
@@ -342,16 +388,16 @@ class BatchTestcaseEvaluator {
         break;
 
       case 'JDK_JAVA':
-        if (this._config.graderFileUri) {
-          executableFileUri = this._config.graderFileUri.substr(0, this._config.graderFileUri.length - 5);
+        if (this._config.graderSourceUri) {
+          executableFileUri = this._config.graderSourceUri.substr(0, this._config.graderSourceUri.length - 5);
         } else {
           executableFileUri = this._config.submissionFileUri.substr(0, this._config.submissionFileUri.length - 5);
         }
         break;
 
       case 'CPYTHON_PYTHON3':
-        if (this._config.graderFileUri) {
-          executableFileUri = this._config.graderFileUri;
+        if (this._config.graderSourceUri) {
+          executableFileUri = this._config.graderSourceUri;
         } else {
           executableFileUri = this._config.submissionFileUri;
         }
@@ -365,10 +411,8 @@ class BatchTestcaseEvaluator {
         this._config.submissionFileUri);
 
     if (status.status) {
-      this.done({
-          score: 0.0,
-          message: 'Execution failed with exit code ' + status.status});
-      return;
+      return this._publishEvaluation(0.0,
+          'Execution failed with exit code ' + status.status);
     }
 
     // Check if solution is correct.
@@ -388,15 +432,9 @@ class BatchTestcaseEvaluator {
 
     //FIXME Look at output instead of exit code.
     if (status.status) {
-      this.done({
-          score: 0.0,
-          message: 'Wrong Answer'});
-      return;
+      return this._publishEvaluation(0.0, 'Wrong answer');
     } else {
-      this.done({
-          score: 1.0,
-          message: 'Correct Answer'});
-      return;
+      return this._publishEvaluation(1.0, 'Correct answer');
     }
   }
 }

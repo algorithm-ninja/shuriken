@@ -120,9 +120,17 @@ const should = require('should');
  * |                         | the normal score of 10).            |           |
  * +-------------------------+-------------------------------------+-----------+
  *
+ * Published result
+ * ----------------
+ *
+ * When the evaluation job is finished a score and a message are published.
+ * They are published in the form of an object having the following fields:
+ * - score: a positive number,
+ * - maxScore: the maximum achievable score.
+ *
  * @todo Provide a way to specify a baseuri corresponding to phony protocol
  *           shuriken://.
- * @todo Accept timeLimit and memoryLimit as config parameters.
+ * @todo Accept timeLimit and memoryLimit as config parameters for the subtasks.
  * @todo Provide a way to configure the connection to Redis (e.g.
  *           authentication).
  * @todo Provide a way to specify a global timeLimit multiplier (via command
@@ -141,8 +149,8 @@ class BatchEvaluator {
    * @constructor
    */
   constructor(job, doneCallback) {
-    this.kueJob = job;
-    this.doneCallback = doneCallback;
+    this._kueJob = job;
+    this._doneCallback = doneCallback;
 
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
@@ -441,14 +449,14 @@ class BatchEvaluator {
    * @private
    */
   _notifyProgressUpstream() {
-    this.kueJob.progress(0, 1, this._renderProgressToHtml());
+    this._kueJob.progress(0, 1, this._renderProgressToHtml());
 
     if (this._allTestcasesHaveFinished()) {
       if (this._someTestcaseFailed()) {
         //TODO: Return (more) meaningful error
-        this.doneCallback('some testcases failed', {});
+        this._doneCallback('some testcases failed', {});
       } else {
-        this.doneCallback(null, this._computeScore());
+        this._doneCallback(null, this._computeScore());
       }
     }
   }
