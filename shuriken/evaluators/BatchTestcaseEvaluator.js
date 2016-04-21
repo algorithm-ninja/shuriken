@@ -286,9 +286,10 @@ class BatchTestcaseEvaluator {
       helperFileUris = [];
     }
 
-    this._sandbox.add(this._config.submissionFileUri);
+    this._sandbox.add(entryPointUri);
+    this._sandbox.add(helperFileUris);
 
-    switch (this._config.submissionLanguage) {
+    switch (language) {
       case 'GCC_CXX':
         args = _.concat(['-Wall', '-Wextra', '-std=c++14', '-O3', '-o',
             entryPointUri + '.bin',
@@ -337,7 +338,6 @@ class BatchTestcaseEvaluator {
    */
   _runExecutable(executableFileUri, language) {
     let status;
-    let args = [];
 
     switch (language) {
       case 'GCC_CXX':
