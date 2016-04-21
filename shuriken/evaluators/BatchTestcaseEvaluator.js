@@ -7,6 +7,7 @@ const domain = require('domain').create();
 const queue = kue.createQueue();
 const should = require('should');
 const _ = require('lodash');
+const path = require('path');
 
 /**
  * BatchTestcaseEvaluator
@@ -104,8 +105,8 @@ class BatchTestcaseEvaluator {
 
     this._config.checkerLanguage = _.get(this._config, 'checkerLanguage', null);
 
-    if (!_.isNull(this._config.checkerSourceUri)) {
-      this._config.checkerLanguage.should.be.null();
+    if (_.isNull(this._config.checkerSourceUri)) {
+      _.isNull(this._config.checkerLanguage).should.be.true();
     } else {
       this._config.checkerLanguage = _.get(this._config,
           'checkerLanguage',
@@ -134,10 +135,12 @@ class BatchTestcaseEvaluator {
         .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
             'MONO_CSHARP']);
 
-    this._config.checkerLanguage
-        .should.be.String()
-        .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
-            'MONO_CSHARP']);
+    if (this._config.checkerLanguage) {
+      this._config.checkerLanguage
+          .should.be.String()
+          .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
+              'MONO_CSHARP']);
+    }
 
     if (this._config.checkerSourceUri) {
       this._config.checkerSourceUri.should.be.String();
@@ -183,7 +186,7 @@ class BatchTestcaseEvaluator {
    * @param {string} message The debug message.
    */
   _fail(message) {
-    message.shold.be.String();
+    message.should.be.String();
 
     this._doneCallback(message, {});
   }
@@ -245,6 +248,7 @@ class BatchTestcaseEvaluator {
    * @return {string} Language code.
    */
   _guessLanguageFromFileExtension(sourceFileUri) {
+    _.isNil(sourceFileUri).should.be.false();
     sourceFileUri.should.be.String();
 
     if (/^.*\.(c|C)$/.test(sourceFileUri)) {
@@ -287,27 +291,35 @@ class BatchTestcaseEvaluator {
     }
 
     this._sandbox.add(entryPointUri);
-    this._sandbox.add(helperFileUris);
+    _.each(helperFileUris, (helperFileUri) => {
+      this._sandbox.add(helperFileUri);
+    });
+
+    //FIXME this doesn't work with actual URIs.
+    const relativeEntryPointPath = path.basename(entryPointUri);
+    const relativeHelperFilePaths = _.map(helperFileUris, (helperFileUri) => {
+      return path.basename(helperFileUri);
+    });
 
     switch (language) {
       case 'GCC_CXX':
         args = _.concat(['-Wall', '-Wextra', '-std=c++14', '-O3', '-o',
-            entryPointUri + '.bin',
-            entryPointUri], helperFileUris);
+            relativeEntryPointPath + '.bin',
+            relativeEntryPointPath], relativeHelperFilePaths);
 
         status = this._sandbox.run('g++', args);
         break;
 
       case 'GCC_C':
         args = _.concat(['-Wall', '-Wextra', '-std=c11', '-O3', '-o',
-            entryPointUri + '.bin',
-            entryPointUri], helperFileUris);
+            relativeEntryPointPath + '.bin',
+            relativeEntryPointPath], relativeHelperFilePaths);
 
         status = this._sandbox.run('gcc', args);
         break;
 
       case 'JDK_JAVA':
-        args = _.concat([entryPointUri], helperFileUris);
+        args = _.concat([relativeEntryPointPath], relativeHelperFilePaths);
 
         status = this._sandbox.run('javac', args);
         break;
@@ -316,8 +328,8 @@ class BatchTestcaseEvaluator {
         break;
 
       case 'MONO_CSHARP':
-        args = _.concat(['-out:' + entryPointUri + '.exe', entryPointUri],
-            helperFileUris);
+        args = _.concat(['-out:' + relativeEntryPointPath + '.exe',
+            relativeEntryPointPath], relativeHelperFilePaths);
 
         status = this._sandbox.run('mcs', args);
         break;
@@ -332,30 +344,34 @@ class BatchTestcaseEvaluator {
    * @todo Actually deal with URIs. For now URIs and file paths are the same.
    *
    * @private
-   * @param {string} executableFileUri The file to run.
+   * @param {string} relativeExecutableFilePath The file to run, relative to the
+   *                     sandbox.
    * @param {string} language The language string (see class doc).
    * @return {Object} The status returned by the sandbox.
    */
-  _runExecutable(executableFileUri, language) {
+  _runExecutable(relativeExecutableFilePath, language) {
     let status;
 
     switch (language) {
       case 'GCC_CXX':
       case 'GCC_C':
-        status = this._sandbox.runRelative(executableFileUri, []);
+        status = this._sandbox.runRelative(relativeExecutableFilePath, []);
         break;
 
       case 'JDK_JAVA':
-        status = this._sandbox.run('java', [executableFileUri]);
+        status = this._sandbox.run('java', [relativeExecutableFilePath]);
         break;
 
       case 'CPYTHON_PYTHON3':
-        status = this._sandbox.run('python3', [executableFileUri]);
+        status = this._sandbox.run('python3', [relativeExecutableFilePath]);
         break;
 
       case 'MONO_CSHARP':
-        status = this._sandbox.run('mono', [executableFileUri]);
+        status = this._sandbox.run('mono', [relativeExecutableFilePath]);
         break;
+
+      default:
+        throw new Error('Unknown language ' + language);
     }
 
     return status;
@@ -370,7 +386,11 @@ class BatchTestcaseEvaluator {
         this._config.graderSourceUri,
         this._config.submissionLanguage);
 
-    if (status.status) {
+    if (_.isNull(status.status) || !_.isNil(status.error)) {
+      return this._fail('Exception while compiling source file.');
+    }
+
+    if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0,
           'Compilation error, exit code ' + status.status);
     }
@@ -380,39 +400,43 @@ class BatchTestcaseEvaluator {
         .stdin('input.txt')
         .stdout('output.txt');
 
-    let executableFileUri;
+    let executablePath;
     switch (this._config.submissionLanguage) {
       case 'GCC_CXX':
       case 'GCC_C':
-        executableFileUri = this._config.submissionFileUri + '.bin';
+        executablePath = path.basename(this._config.submissionFileUri + '.bin');
         break;
 
       case 'JDK_JAVA':
         if (this._config.graderSourceUri) {
-          executableFileUri = this._config.graderSourceUri
-              .substr(0, this._config.graderSourceUri.length - 5);
+          executablePath = path.basename(this._config.graderSourceUri
+              .substr(0, this._config.graderSourceUri.length - 5));
         } else {
-          executableFileUri = this._config.submissionFileUri
-              .substr(0, this._config.submissionFileUri.length - 5);
+          executablePath = path.basename(this._config.submissionFileUri
+              .substr(0, this._config.submissionFileUri.length - 5));
         }
         break;
 
       case 'CPYTHON_PYTHON3':
         if (this._config.graderSourceUri) {
-          executableFileUri = this._config.graderSourceUri;
+          executablePath = path.basename(this._config.graderSourceUri);
         } else {
-          executableFileUri = this._config.submissionFileUri;
+          executablePath = path.basename(this._config.submissionFileUri);
         }
         break;
 
       case 'MONO_CSHARP':
-        executableFileUri = this._config.submissionFileUri + '.exe';
+        executablePath = path.basename(this._config.submissionFileUri + '.exe');
         break;
     }
-    status = this._runExecutable(executableFileUri,
-        this._config.submissionFileUri);
+    status = this._runExecutable(executablePath,
+        this._config.submissionLanguage);
 
-    if (status.status) {
+    if (_.isNull(status.status) || !_.isNil(status.error)) {
+      return this._fail('Exception while executing solution.');
+    }
+
+    if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0,
           'Execution failed with exit code ' + status.status);
     }
@@ -433,7 +457,11 @@ class BatchTestcaseEvaluator {
     }
 
     //FIXME Look at output instead of exit code.
-    if (status.status) {
+    if (_.isNull(status.status) || !_.isNil(status.error)) {
+      return this._fail('Exception while checking the answer.');
+    }
+
+    if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0, 'Wrong answer');
     } else {
       return this._publishEvaluation(1.0, 'Correct answer');
