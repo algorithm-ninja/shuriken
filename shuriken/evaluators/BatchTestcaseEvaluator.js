@@ -367,7 +367,7 @@ class BatchTestcaseEvaluator {
   run() {
     // Compile contestant solution.
     let status = this._compileFile(this._config.submissionFileUri,
-        this._config.this._config.graderSourceUri,
+        this._config.graderSourceUri,
         this._config.submissionLanguage);
 
     if (status.status) {
@@ -389,9 +389,11 @@ class BatchTestcaseEvaluator {
 
       case 'JDK_JAVA':
         if (this._config.graderSourceUri) {
-          executableFileUri = this._config.graderSourceUri.substr(0, this._config.graderSourceUri.length - 5);
+          executableFileUri = this._config.graderSourceUri
+              .substr(0, this._config.graderSourceUri.length - 5);
         } else {
-          executableFileUri = this._config.submissionFileUri.substr(0, this._config.submissionFileUri.length - 5);
+          executableFileUri = this._config.submissionFileUri
+              .substr(0, this._config.submissionFileUri.length - 5);
         }
         break;
 
