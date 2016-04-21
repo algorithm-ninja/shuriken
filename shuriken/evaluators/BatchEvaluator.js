@@ -70,10 +70,9 @@ const should = require('should');
  * |                         | MiB are available for the execution |           |
  * |                         | of submissionFile.                  |           |
  * +-------------------------+-------------------------------------+-----------+
- * | evaluationStructure     | A list of positive integers. The    |     Y     |
- * |                         | i-th of these integers represents   |           |
- * |                         | N_i, the number of testcases in the |           |
- * |                         | i-th subtask.                       |           |
+ * | evaluationStructure     | A list of subtask objects. The      |     Y     |
+ * |                         | i-th of these objects represents    |           |
+ * |                         | the i-th subtask.                   |           |
  * +-------------------------+-------------------------------------+-----------+
  * | checkerSourceUri        | An URI to the checker source. If    |     N     |
  * |                         | this field is set to null or it is  |           |
@@ -102,6 +101,24 @@ const should = require('should');
  * |                         | is chosen.                          |           |
  * +-------------------------+-------------------------------------+-----------+
  *
+ * Subtask Configuration
+ * ---------------------
+ *
+ * These are the fields currently expected by each subtask object:
+ *
+ * +-------------------------+-------------------------------------+-----------+
+ * | Field name              | Description                         | Mandatory |
+ * +-------------------------+-------------------------------------+-----------+
+ * | nTestcases              | An integer number representing how  |     Y     |
+ * |                         | many testcases there are.           |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | scoreMultiplier         | Multiplier to be applied to the     |     N     |
+ * |                         | subtask score (e.g. if the subtask  |           |
+ * |                         | has 10 TCs and the scoreMultiplier  |           |
+ * |                         | is 1.5, then solving all 10 TCs     |           |
+ * |                         | will yield a score of 15 instead of |           |
+ * |                         | the normal score of 10).            |           |
+ * +-------------------------+-------------------------------------+-----------+
  *
  * @todo Provide a way to specify a baseuri corresponding to phony protocol
  *           shuriken://.
@@ -182,6 +199,24 @@ class BatchEvaluator {
         .should.be.String()
         .and.equalOneOf('sum', 'min', 'max');
 
+    for (let subtask of this._config.evaluationStructure) {
+      subtask
+          .should.have.properties('nTestcases');
+
+      //FIXME Also check that it is integer
+      subtask.nTestcases
+          .should.be.Number()
+          .and.not.be.Infinity()
+          .and.be.above(0);
+
+      subtask.scoreMultiplier = _.get(subtask, 'scoreMultiplier', 1.0);
+
+      subtask.scoreMultiplier
+          .should.be.Number()
+          .and.not.be.Infinity()
+          .and.be.aboveOrEqual(0);
+    }
+
     this._validateUris().should.be.true();
   }
 
@@ -208,7 +243,7 @@ class BatchEvaluator {
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
       const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
 
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
@@ -233,7 +268,7 @@ class BatchEvaluator {
          subtaskIndex <= this._config.evaluationStructure.length;
          ++subtaskIndex) {
        const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
 
        for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
             ++testcaseIndex) {
@@ -327,7 +362,7 @@ class BatchEvaluator {
          subtaskIndex <= this._config.evaluationStructure.length;
          ++subtaskIndex) {
       const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
       s += '    <tr class="subtask"><td colspan="2">Subtask ';
       s += subtaskIndex + '</td><td></td></tr>\n';
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -353,7 +388,7 @@ class BatchEvaluator {
    *             - `maxScore` The score of the submassion if all testcases were
    *                    given a score of 1.0.
    */
-  _calculateScore() {
+  _computeScore() {
     const aggregationFunctions = {
       'max': function(a, b) { return Math.max(a, b); },
       'min': function(a, b) { return Math.min(a, b); },
@@ -369,7 +404,7 @@ class BatchEvaluator {
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
       const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
 
       let subtaskScore = 0, maxSubtaskScore = 0;
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -384,6 +419,9 @@ class BatchEvaluator {
           maxSubtaskScore = intraSubtaskLambda(maxSubtaskScore, 1.0);
         }
       }
+
+      subtaskScore *=
+          this._config.evaluationStructure[subtaskIndex - 1].scoreMultiplier;
 
       if (subtaskIndex === 1) {
         score = subtaskScore;
@@ -410,7 +448,7 @@ class BatchEvaluator {
         //TODO: Return (more) meaningful error
         this.doneCallback('some testcases failed', {});
       } else {
-        this.doneCallback(null, this._calculateScore());
+        this.doneCallback(null, this._computeScore());
       }
     }
   }
@@ -450,7 +488,7 @@ class BatchEvaluator {
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
       const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
 
       this._testcaseEvaluationProgress[subtaskIndex] = {};
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
@@ -522,7 +560,7 @@ class BatchEvaluator {
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
       const nTestcasesForSubtask =
-          this._config.evaluationStructure[subtaskIndex - 1];
+          this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
         this._enqueueTestcase(subtaskIndex, testcaseIndex, {});

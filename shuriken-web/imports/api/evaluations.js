@@ -38,7 +38,11 @@ Meteor.methods({
         tcOutputFileUriSchema: '',
         intraSubtaskAggregation: 'sum',
         interSubtaskAggregation: 'sum',
-        evaluationStructure: [2, 3, 2],
+        evaluationStructure: [
+          {nTestcases: 2},
+          {nTestcases: 3, scoreMultiplier: 1.5},
+          {nTestcases: 2}
+        ],
         timeLimit: 1.0,
         memoryLimit: 256.0,
       });
