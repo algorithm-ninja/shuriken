@@ -2,12 +2,13 @@
 
 const Sandbox = require('../sandboxes/dummy');
 
-const kue = require('kue');
-const domain = require('domain').create();
-const queue = kue.createQueue();
-const should = require('should');
 const _ = require('lodash');
+const domain = require('domain');
+const kue = require('kue');
 const path = require('path');
+const should = require('should');
+
+const queue = kue.createQueue();
 
 /**
  * BatchTestcaseEvaluator

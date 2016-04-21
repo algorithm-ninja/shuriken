@@ -1,11 +1,13 @@
 'use strict';
 
-const kue = require('kue');
-const queue = kue.createQueue();
 const _ = require('lodash');
-const mustache = require('mustache');
 const domain = require('domain');
+const kue = require('kue');
+const mustache = require('mustache');
 const should = require('should');
+
+const queue = kue.createQueue();
+
 
 /**
  * BatchEvaluator
