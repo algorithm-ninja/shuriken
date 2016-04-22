@@ -157,16 +157,12 @@ class BatchEvaluator {
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
     this._config = job.data;
-    this._config.should.be.Object();
+    should(this._config).be.Object();
 
-    // Step 1. Check all mandatory fields are there.
-    this._config
-        .should.have.properties('submissionFileUri')
-        .and.have.properties('tcInputFileUriSchema')
-        .and.have.properties('tcOutputFileUriSchema')
-        .and.have.properties('evaluationStructure')
-        .and.have.properties('timeLimit')
-        .and.have.properties('memoryLimit');
+    // Step 1. Check that all mandatory fields are there.
+    should(this._config).have.properties(['submissionFileUri',
+        'tcInputFileUriSchema', 'tcOutputFileUriSchema', 'evaluationStructure',
+        'timeLimit', 'memoryLimit']);
 
     // Step 2. Set all non mandatory fields to the default values.
     this._config.checkerSourceUri =
@@ -177,57 +173,50 @@ class BatchEvaluator {
         _.get(this._config, 'interSubtaskAggregation', 'sum');
 
     // Step 3. For each field, check values are feasible.
-    this._config.submissionFileUri
-        .should.be.String();
-
-    this._config.tcInputFileUriSchema
-        .should.be.String();
-
-    this._config.tcOutputFileUriSchema
-        .should.be.String();
+    should(this._config.submissionFileUri).be.String();
+    should(this._config.tcInputFileUriSchema).be.String();
+    should(this._config.tcOutputFileUriSchema).be.String();
 
     if (this._config.checkerSourceUri) {
-      this._config.checkerSourceUri
-          .should.be.String();
+      should(this._config.checkerSourceUri).be.String();
     }
 
-    this._config.timeLimit
-        .should.be.Number()
+    should(this._config.timeLimit)
+        .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
 
-    this._config.memoryLimit
-        .should.be.Number()
+    should(this._config.memoryLimit)
+        .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
 
-    this._config.intraSubtaskAggregation
-        .should.be.String()
+    should(this._config.intraSubtaskAggregation)
+        .be.String()
         .and.equalOneOf('sum', 'min', 'max');
 
-    this._config.interSubtaskAggregation
-        .should.be.String()
+    should(this._config.interSubtaskAggregation)
+        .be.String()
         .and.equalOneOf('sum', 'min', 'max');
 
     for (let subtask of this._config.evaluationStructure) {
-      subtask
-          .should.have.properties('nTestcases');
+      should(subtask).have.properties('nTestcases');
 
       //FIXME Also check that it is integer
-      subtask.nTestcases
-          .should.be.Number()
+      should(subtask.nTestcases)
+          .be.Number()
           .and.not.be.Infinity()
           .and.be.above(0);
 
       subtask.scoreMultiplier = _.get(subtask, 'scoreMultiplier', 1.0);
 
-      subtask.scoreMultiplier
-          .should.be.Number()
+      should(subtask.scoreMultiplier)
+          .be.Number()
           .and.not.be.Infinity()
           .and.be.aboveOrEqual(0);
     }
 
-    this._validateUris().should.be.true();
+    should(this._validateUris()).be.true();
   }
 
   /**
@@ -475,8 +464,8 @@ class BatchEvaluator {
    */
   _updateTestcaseProgress(subtaskIndex, testcaseIndex, progress,
                           preventUpdate) {
-    progress
-        .should.be.Object()
+    should(progress)
+        .be.Object()
         .and.have.properties('state')
         .and.have.properties('score')
         .and.have.properties('message');
@@ -533,17 +522,17 @@ class BatchEvaluator {
 
     queue.create('subjob', testcaseEvaluationConfiguration)
       .on('complete', function(result) {
-        result
-            .should.be.Object()
+        should(result)
+            .be.Object()
             .and.have.properties('score')
             .and.have.properties('message');
-        result.score
-            .should.be.Number()
+        should(result.score)
+            .be.Number()
             .and.not.be.Infinity()
             .and.be.aboveOrEqual(0)
             .and.be.belowOrEqual(1);
-        result.message
-            .should.be.String();
+        should(result.message)
+            .be.String();
 
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'complete',

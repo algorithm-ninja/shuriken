@@ -84,15 +84,11 @@ class BatchTestcaseEvaluator {
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
     this._config = job.data;
-    this._config.should.be.Object();
+    should(this._config).be.Object();
 
     // Step 1. Check all mandatory fields are there.
-    this._config
-        .should.have.properties('submissionFileUri')
-        .and.have.properties('tcInputFileUri')
-        .and.have.properties('tcOutputFileUri')
-        .and.have.properties('timeLimit')
-        .and.have.properties('memoryLimit');
+    should(this._config).have.properties(['submissionFileUri', 'tcInputFileUri',
+        'tcOutputFileUri', 'timeLimit', 'memoryLimit']);
 
     // Step 2. Set all non mandatory fields to the default values.
     this._config.graderSourceUri =
@@ -115,44 +111,42 @@ class BatchTestcaseEvaluator {
     }
 
     // Step 3. For each field, check values are feasible.
-    this._config.submissionFileUri.should.be.String();
+    should(this._config.submissionFileUri).be.String();
+    should(this._config.tcInputFileUri).be.String();
+    should(this._config.tcOutputFileUri).be.String();
 
-    this._config.tcInputFileUri.should.be.String();
-
-    this._config.tcOutputFileUri.should.be.String();
-
-    this._config.timeLimit
-        .should.be.Number()
+    should(this._config.timeLimit)
+        .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
 
-    this._config.memoryLimit
-        .should.be.Number()
+    should(this._config.memoryLimit)
+        .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
 
-    this._config.submissionLanguage
-        .should.be.String()
+    should(this._config.submissionLanguage)
+        .be.String()
         .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
             'MONO_CSHARP']);
 
     if (this._config.checkerLanguage) {
-      this._config.checkerLanguage
-          .should.be.String()
+      should(this._config.checkerLanguage)
+          .be.String()
           .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
               'MONO_CSHARP']);
     }
 
     if (this._config.checkerSourceUri) {
-      this._config.checkerSourceUri.should.be.String();
+      should(this._config.checkerSourceUri).be.String();
     }
 
     if (this._config.graderSourceUri) {
-      this._config.graderSourceUri.should.be.String();
+      should(this._config.graderSourceUri).be.String();
     }
 
     // Step 4. Check all URIs as a pre-check.
-    this._validateUris().should.be.true();
+    should(this._validateUris()).be.true();
 
     // Step 5. Create the sandbox object.
     this._sandbox = new Sandbox()
@@ -169,10 +163,10 @@ class BatchTestcaseEvaluator {
    * @param {string} message The message.
    */
   _publishEvaluation(score, message) {
-    score
-        .should.be.Number()
+    should(score)
+        .be.Number()
         .and.be.within(0, 1);
-    message.should.be.String();
+    should(message).be.String();
 
     this._doneCallback(null, {
         'score': score,
@@ -187,7 +181,7 @@ class BatchTestcaseEvaluator {
    * @param {string} message The debug message.
    */
   _fail(message) {
-    message.should.be.String();
+    should(message).be.String();
 
     this._doneCallback(message, {});
   }
@@ -249,8 +243,7 @@ class BatchTestcaseEvaluator {
    * @return {string} Language code.
    */
   _guessLanguageFromFileExtension(sourceFileUri) {
-    _.isNil(sourceFileUri).should.be.false();
-    sourceFileUri.should.be.String();
+    should(sourceFileUri).be.String();
 
     if (/^.*\.(c|C)$/.test(sourceFileUri)) {
       return 'GCC_C';
