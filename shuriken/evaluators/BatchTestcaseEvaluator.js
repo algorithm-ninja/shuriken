@@ -463,13 +463,18 @@ class BatchTestcaseEvaluator {
   }
 }
 
-queue.process('subjob', function(job, done) {
-  let d = domain.create();
-  d.on('error', (err) => {
-    done(err);
+module.exports = BatchTestcaseEvaluator;
+
+// If this is being called from a shell, listen to the queue.
+if (module.parent) {
+  queue.process('subjob', function(job, done) {
+    let d = domain.create();
+    d.on('error', (err) => {
+      done(err);
+    });
+    d.run(() => {
+      let evaluator = new BatchTestcaseEvaluator(job, done);
+      evaluator.run();
+    });
   });
-  d.run(() => {
-    let evaluator = new BatchTestcaseEvaluator(job, done);
-    evaluator.run();
-  });
-});
+}

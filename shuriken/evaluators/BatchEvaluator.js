@@ -568,13 +568,18 @@ class BatchEvaluator {
   }
 }
 
-queue.process('evaluation', function(job, done) {
-  let d = domain.create();
-  d.on('error', (err) => {
-    done(err, {});
+module.exports = BatchEvaluator;
+
+// If this is being called from a shell, listen to the queue.
+if (module.parent) {
+  queue.process('evaluation', function(job, done) {
+    let d = domain.create();
+    d.on('error', (err) => {
+      done(err, {});
+    });
+    d.run(() => {
+      let evaluator = new BatchEvaluator(job, done);
+      evaluator.run();
+    });
   });
-  d.run(() => {
-    let evaluator = new BatchEvaluator(job, done);
-    evaluator.run();
-  });
-});
+}
