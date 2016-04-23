@@ -5,6 +5,7 @@ const domain = require('domain');
 const kue = require('kue');
 const mustache = require('mustache');
 const should = require('should');
+const util = require('util');
 
 const queue = kue.createQueue();
 
@@ -46,13 +47,11 @@ const queue = kue.createQueue();
  * +-------------------------+-------------------------------------+-----------+
  * | Field name              | Description                         | Mandatory |
  * +-------------------------+-------------------------------------+-----------+
- * | submissionFileUri       | An URI to the submission file.      |     Y     |
- * +-------------------------+-------------------------------------+-----------+
  * | tcInputFileUriSchema    | A string containing two `%d` wild-  |     Y     |
  * |                         | wildcards. This represent the URI   |           |
  * |                         | schema for the testcase input       |           |
  * |                         | files. The first wildcard will be   |           |
- * |                         | substituted by the subtast index,   |           |
+ * |                         | substituted by the subtask index,   |           |
  * |                         | the second one by the testcase      |           |
  * |                         | index.                              |           |
  * +-------------------------+-------------------------------------+-----------+
@@ -60,7 +59,7 @@ const queue = kue.createQueue();
  * |                         | wildcards. This represent the URI   |           |
  * |                         | schema for the testcase output      |           |
  * |                         | files. The first wildcard will be   |           |
- * |                         | substituted by the subtast index,   |           |
+ * |                         | substituted by the subtask index,   |           |
  * |                         | the second one by the testcase      |           |
  * |                         | index.                              |           |
  * +-------------------------+-------------------------------------+-----------+
@@ -76,11 +75,20 @@ const queue = kue.createQueue();
  * |                         | i-th of these objects represents    |           |
  * |                         | the i-th subtask.                   |           |
  * +-------------------------+-------------------------------------+-----------+
- * | checkerSourceUri        | An URI to the checker source. If    |     N     |
- * |                         | this field is set to null or it is  |           |
- * |                         | not present, it is assumed that no  |           |
- * |                         | checker is necessary in order to    |           |
- * |                         | validate the contestant output      |           |
+ * | submissionFileUri       | Forwarded field, see:               |     Y     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | submissionLanguage      | Forwarded field, see:               |     Y     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | checkerSourceUri        | Forwarded field, see:               |     N     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | checkerLanguage         | Forwarded field, see:               |     N     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | graderSourceUri         | Forwarded field, see:               |     N     |
+ * |                         |   BatchTestcaseEvaluator            |           |
  * +-------------------------+-------------------------------------+-----------+
  * | intraSubtaskAggregation | A string representing the aggrega-  |     N     |
  * |                         | tion function inside subtasks (see  |           |
@@ -173,13 +181,10 @@ class BatchEvaluator {
         _.get(this._config, 'interSubtaskAggregation', 'sum');
 
     // Step 3. For each field, check values are feasible.
-    should(this._config.submissionFileUri).be.String();
     should(this._config.tcInputFileUriSchema).be.String();
+    (this._config.tcInputFileUriSchema.match(/%s/g) || []).length.should.be.aboveOrEqual(2);
     should(this._config.tcOutputFileUriSchema).be.String();
-
-    if (this._config.checkerSourceUri) {
-      should(this._config.checkerSourceUri).be.String();
-    }
+    (this._config.tcOutputFileUriSchema.match(/%s/g) || []).length.should.be.aboveOrEqual(2);
 
     should(this._config.timeLimit)
         .be.Number()
@@ -558,11 +563,39 @@ class BatchEvaluator {
     for (let subtaskIndex = 1;
         subtaskIndex <= this._config.evaluationStructure.length;
         ++subtaskIndex) {
+
       const nTestcasesForSubtask =
           this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
+      let conf = {
+        timeLimit: this._config.timeLimit,
+        memoryLimit: this._config.memoryLimit,
+        submissionFileUri: this._config.submissionFileUri,
+        submissionLanguage: this._config.submissionLanguage
+      };
+
+      if (this._config.graderSourceUri) {
+        conf.graderSourceUri = this._config.graderSourceUri;
+      }
+
+      if (this._config.checkerSourceUri) {
+        conf.checkerSourceUri = this._config.checkerSourceUri;
+      }
+
+      if (this._config.checkerLanguage) {
+        conf.checkerLanguage = this._config.checkerLanguage;
+      }
+
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
-        this._enqueueTestcase(subtaskIndex, testcaseIndex, {});
+        // Update information about test data
+        Object.assign(conf, {
+          tcInputFileUri: util.format(this._config.tcInputFileUriSchema,
+              subtaskIndex, testcaseIndex),
+          tcOutputFileUri: util.format(this._config.tcOutputFileUriSchema,
+              subtaskIndex, testcaseIndex)
+        });
+
+        this._enqueueTestcase(subtaskIndex, testcaseIndex, conf);
       }
     }
   }
@@ -571,7 +604,7 @@ class BatchEvaluator {
 module.exports = BatchEvaluator;
 
 // If this is being called from a shell, listen to the queue.
-if (module.parent) {
+if (!module.parent) {
   queue.process('evaluation', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
