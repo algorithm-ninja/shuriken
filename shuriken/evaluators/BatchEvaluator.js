@@ -182,9 +182,9 @@ class BatchEvaluator {
 
     // Step 3. For each field, check values are feasible.
     should(this._config.tcInputFileUriSchema).be.String();
-    (this._config.tcInputFileUriSchema.match(/%s/g) || []).length.should.be.aboveOrEqual(2);
+    (this._config.tcInputFileUriSchema.match(/%d/g) || []).length.should.equal(2);
     should(this._config.tcOutputFileUriSchema).be.String();
-    (this._config.tcOutputFileUriSchema.match(/%s/g) || []).length.should.be.aboveOrEqual(2);
+    (this._config.tcOutputFileUriSchema.match(/%d/g) || []).length.should.equal(2);
 
     should(this._config.timeLimit)
         .be.Number()
