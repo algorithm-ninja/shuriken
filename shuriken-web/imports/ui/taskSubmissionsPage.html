@@ -1,0 +1,19 @@
+<template name="taskSubmissionsPage">
+  <h1>{{taskTitle}} (<tt>{{routeTaskCodename}}</tt>)</h1>
+  <hr>
+
+  {{> newSubmissionForm}}
+
+  <h3>Your past submissions</h3>
+  {{#if submissionsLoaded}}
+    {{#if validateObjects}}
+      {{#each submissions}}
+        <!--{{> submission}}-->
+      {{/each}}
+    {{else}}
+      <h4>Not available :-(</h4>
+    {{/if}}
+  {{else}}
+    <h4>Loading...</h4>
+  {{/if}}
+</template>

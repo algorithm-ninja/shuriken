@@ -1,13 +1,12 @@
 'use strict';
 
 import { Template } from 'meteor/templating';
-import { Tasks } from '../api/tasks.js';
 
+// UI elements.
 import './body.html';
-import './sidebar.js';
-import './taskSubmissionPage.js';
+import './contestPageLayout.js';
 import './taskStatementPage.js';
-
+import './taskSubmissionsPage.js';
 import '../styles/material-icons/material-icons.css';
 
 Template.registerHelper('equals', function (a, b) {
@@ -16,45 +15,43 @@ Template.registerHelper('equals', function (a, b) {
 
 Router.route('/', function () {
   if (Meteor.userId()) {
-    this.layout('loggedLayout');
+    this.layout('loggedContestantContestPage');
   } else {
     this.render('loginPage');
   }
 });
 
-Router.route('/task/statement/:codename', function () {
+Router.route('/contest/:contestCodename/task/:taskCodename', function () {
   if (Meteor.userId()) {
-    this.layout('loggedLayout');
-    let codename = this.params.codename;
-    let taskObj = Tasks.findOne({codename: codename});
+    let contestCodename = this.params.contestCodename;
+    let taskCodename = this.params.taskCodename;
 
-    if (taskObj) {
-      this.render('taskStatementPage', {
-        data: {
-          currentTask: taskObj,
-      }});
-    } else {
-      this.render('notFound');
-    }
+    this.layout('contestPageLayout', {data: {
+      routeContestCodename: contestCodename,
+    }});
+
+    this.render('taskStatementPage', {data: {
+      routeContestCodename: contestCodename,
+      routeTaskCodename: taskCodename,
+    }});
   } else {
     this.render('loginPage');
   }
 });
 
-Router.route('/task/submissions/:codename', function () {
+Router.route('/contest/:contestCodename/task/:taskCodename/submissions', function () {
   if (Meteor.userId()) {
-    this.layout('loggedLayout');
-    let codename = this.params.codename;
-    let taskObj = Tasks.findOne({codename: codename});
+    let contestCodename = this.params.contestCodename;
+    let taskCodename = this.params.taskCodename;
 
-    if (taskObj) {
-      this.render('taskSubmissionPage', {
-        data: {
-          currentTask: taskObj,
-      }});
-    } else {
-      this.render('notFound');
-    }
+    this.layout('contestPageLayout', {data: {
+      routeContestCodename: contestCodename,
+    }});
+
+    this.render('taskSubmissionsPage', {data: {
+      routeContestCodename: contestCodename,
+      routeTaskCodename: taskCodename,
+    }});
   } else {
     this.render('loginPage');
   }

@@ -1,15 +1,15 @@
-<template name="tasklist">
+<template name="contestTasklist">
   <div class = "panel">
     <div class="list-group framed">
-      {{#each tasks}}
-        {{> task}}
+      {{#each contestTasks}}
+        {{> task }}
       {{/each}}
     </div>
   </div>
 </template>
 
 <template name="task">
-  <a href="/task/statement/{{codename}}" class="list-group-item task-link">
+  <a href="/contest/{{../routeContestCodename}}/task/{{codename}}" class="list-group-item task-link">
     <div>
       <h4 class="list-group-item-heading">{{codename}}</h4>
       <p class="list-group-item-text">Some text here</p>

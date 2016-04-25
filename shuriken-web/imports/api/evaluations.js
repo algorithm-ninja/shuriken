@@ -2,32 +2,56 @@
 
 import { Mongo } from 'meteor/mongo';
 import { KueJobCollection } from '../KueJobCollection.js';
+import { Submission } from '../models/Submission.js';
+import { Submissions } from './submissions.js';
 
 const kue = require('kue');
-
-export const Evaluations = new Mongo.Collection('evaluations');
-const EvaluationsKueWrapper = new KueJobCollection(Evaluations);
-
 let queue = null;
 if (Meteor.isServer) {
   queue = kue.createQueue();
 }
 
+export const Evaluations = new Mongo.Collection('evaluations');
+const EvaluationsKueWrapper = new KueJobCollection(Evaluations);
+
 if (Meteor.isServer) {
-  Meteor.publish('Evaluations', function() {
-    return Evaluations.find({
-      owner: this.userId,
-    });
+  /**
+   * Publishes the live Evaluation object for a specific submission Id.
+   *
+   * @param {!ObjectId} submissionId The submission ObjectId.
+   */
+  Meteor.publish('LiveEvaluationForSubmission', function(submissionId) {
+    if (!this.userId) {
+      throw new Meteor.Error('Must be logged');
+    }
+
+    // Check that submission is owned by the current user.
+    const submissionCursor = Submissions.find({_id: submissionId},
+        {limit: 1});
+    if (submissionCursor.count() !== 1) {
+      throw new Meteor.Error('Requested live evaluation for submission `' +
+          submissionId + '` but submission is not found.');
+    }
+    const submissionObject =
+        new Submission.fromJson(submissionCursor.fetch()[0]);
+
+    if (submissionObject.userId !== this.userId) {
+      Meteor.Error('Requested live evaluation for submission `' +
+        submissionId + '` from user `' + this.userId + '` but ' +
+        'submission is owned by user `' + submissionObject.userId + '`.');
+    } else {
+      return Evaluations.find({
+        'submissionId': submissionId,
+        isLive: true,
+      }, {
+        limit: 1,
+      });
+    }
   });
 }
 
-Meteor.methods({
-  'evaluations.watchKueJob'(kueJobId) {
-    if (Meteor.isServer) {
-      EvaluationsKueWrapper.watchJob(kueJobId);
-    }
-  },
-  'evaluations.enqueue'(taskId, submissionContent) {
+/*Meteor.methods({
+  'evaluations.enqueue'(revisionId) {
     if (Meteor.isServer) {
       const queueName = 'evaluation';
 
@@ -46,11 +70,15 @@ Meteor.methods({
         timeLimit: 1.0,
         memoryLimit: 256.0,
       });
+
+      const submission = Submissions.findOne({
+        'submissionId': submissionId});
+      if (submission.userId)
       EvaluationsKueWrapper.insertJob({
-        owner: Meteor.userId(),
-        taskId: taskId,
-        submissionContent: submissionContent,
+        'submissionId': submissionId,
+        'taskRevisionId':,
       }, job);
     }
   },
 });
+*/

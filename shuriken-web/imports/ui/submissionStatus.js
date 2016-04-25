@@ -2,11 +2,11 @@
 
 import { Template } from 'meteor/templating';
 
-import './evaluation.html';
+import './submissionStatus.html';
 const moment = require('moment');
 const _ = require('lodash');
 
-Template.evaluation.onCreated(function(){
+Template.submissionStatus.onCreated(function(){
   if (this.data.id) {
     Meteor.call('evaluations.watchKueJob', this.data.id);
   }
@@ -18,17 +18,17 @@ Template.evaluation.onCreated(function(){
   Meteor.subscribe('Evaluations');
 });
 
-Template.evaluation.helpers({
+Template.submissionStatus.helpers({
   'jobConfiguration'() {
     return JSON.stringify(this.data, null, 2);
   },
 
   'humanEvaluationDateTime'() {
-    if (this.created_at) {
+    if (this.kueCreatedAt) {
       //IDEA: in the future, use fromNow() instead of printing the absolute
       //      dateTime. In order for this to work reactively, .fromNow() should
       //      invalidate the template on change, via Tracker.
-      return moment(+this.created_at).local().format('D MMM YYYY, HH:mm:ss');
+      return moment(+this.kueCreatedAt).local().format('D MMM YYYY, HH:mm:ss');
     } else {
       return 'Unknown';
     }
@@ -79,7 +79,7 @@ Template.evaluation.helpers({
         case 'complete':
           return '#4caf50';
       }
-      return '#7f7f7f';
     }
+    return '#7f7f7f';
   }
 });
