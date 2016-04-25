@@ -58,7 +58,7 @@ module.exports = class Sandbox {
   add(filename, newFilename) {
     // Sanity checks
     should(filename).be.a.String();
-    should(path.exists(filename)).be.true();
+    should(fse.statSync(filename).isFile()).be.true();
     if (newFilename) {
       should(newFilename).be.a.String();
       should(newFilename.length).be.above(0);

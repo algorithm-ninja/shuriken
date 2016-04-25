@@ -53,8 +53,8 @@ const queue = kue.createQueue();
  * +-------------------------+-------------------------------------+-----------+
  * | checkerSourceUri        | URI of the checker file.            |     N     |
  * +-------------------------+-------------------------------------+-----------+
- * | checkerLanguage         | Language for checker. See above for |     N     |
- * |                         | more information.                   |           |
+ * | checkerLanguage         | Language for checker. For more info |     N     |
+ * |                         | see: submissionLanguage.            |           |
  * +-------------------------+-------------------------------------+-----------+
  *
  * Published result
@@ -466,7 +466,7 @@ class BatchTestcaseEvaluator {
 module.exports = BatchTestcaseEvaluator;
 
 // If this is being called from a shell, listen to the queue.
-if (module.parent) {
+if (!module.parent) {
   queue.process('subjob', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
