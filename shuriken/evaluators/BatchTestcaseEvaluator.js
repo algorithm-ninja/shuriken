@@ -247,7 +247,7 @@ class BatchTestcaseEvaluator {
 
     if (/^.*\.c$/.test(sourceFileUri)) {
       return 'GCC_C';
-    } else if (/^.*\.(cc|cpp|cxx|c++|C)$/.test(sourceFileUri)) {
+    } else if (/^.*\.(cc|cpp|cxx|c\+\+|C)$/.test(sourceFileUri)) {
       return 'GCC_CXX';
     } else if (/^.*\.java$/.test(sourceFileUri)) {
       return 'JDK_JAVA';
