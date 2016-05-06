@@ -1,71 +1,108 @@
 'use strict';
 
 // Libs.
-import {ReactiveDict} from 'meteor/reactive-dict';
-import {getRouteContest, validateContestObjects}
+import {ReactiveMap} from '../lib/reactiveMap';
+import {getRouteContestCodename, getRouteContest, validateContestObjects}
     from '../lib/routeContestUtils.js';
+// Requires.
+const _ = require('lodash');
 // UI fragments
 import './contestPageLayout.html';
 import './contestSidebar.js';
-// Requires.
-const _ = require('lodash');
-const should = require('should');
 
 /**
- * contestPageLayout
- * =================
- *
  * Main entry point for all contest-related pages.
  *
- * Context
- * -------
+ * #### Context
  *
  * - routeContestCodename
  * @todo complete section.
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
  *
  * @todo complete section.
  */
 Template.contestPageLayout.onCreated(function() {
   let self = this;
-  const ContestSubscriptionHandle =
-      this.subscribe('ContestByCodename', this.data.routeContestCodename);
 
-  this.data.subscriptionStatus = new ReactiveDict();
-  this.data.subscriptionStatus.set('contestByCodename', false);
+  this.routeContestCodename = new ReactiveVar(null);
+  this.contestSubscriptionHandle = new ReactiveVar(null);
+  this.subscriptionStatus = new ReactiveMap();
 
-  // Before continuiung we dynamically subscribe to all Task objects related
-  // to the current Contest object.
+  // Every time Template.currentData() changes, update routeContestCodename.
   this.autorun(function() {
-    if (ContestSubscriptionHandle.ready()) {
-      const routeContest = getRouteContest.apply(self.data);
-      should(routeContest.isLoaded()).be.true();
+    self.routeContestCodename.set(getRouteContestCodename(
+        Template.currentData()));
+  });
 
+  // Every time the routeContestCodename changes, stop all subscriptions and
+  // subscribe to the right objects.
+  this.autorun(function() {
+    console.log('Starting dynamic subscription to contest objects.');
+
+    if (!_.isNull(self.routeContestCodename.get())) {
+      Tracker.nonreactive(_unsubscribeFromContestData.bind(self));
+      Tracker.nonreactive(_subscribeToContestData.bind(self));
+    }
+  });
+});
+
+/**
+ * Subscribes to all objects relevant to the given contest codename.
+ *
+ * Warning: run this nonreactively.
+ *
+ * @private (do not export)
+ */
+const _subscribeToContestData = function() {
+  let self = this;
+
+  const subscribeToTasksAndRevisions = function() {
+    const routeContest = getRouteContest(self.data);
+
+    if (routeContest) {
       // If we are here, the Contest is correctly loaded. Now let's load all
       // Task and TaskRevision objects related to the current Contest object.
       _.each(routeContest.tasks, (taskData) => {
         const taskId = taskData.taskId;
         const taskRevisionId = taskData.taskRevisionId;
 
-        self.data.subscriptionStatus.set(taskId.valueOf(), false);
-        self.subscribe('TaskById', taskId, {onReady: () => {
-          self.data.subscriptionStatus.set(taskId.valueOf(), true);
-        }});
+        self.subscriptionStatus.set(taskId.valueOf(),
+            self.subscribe('TaskById', taskId));
+        console.log('Subscription to task id ' + taskId);
 
-        self.data.subscriptionStatus.set(taskRevisionId.valueOf(), false);
-        self.subscribe('TaskRevisionById', taskRevisionId, {onReady: () => {
-          self.data.subscriptionStatus.set(taskRevisionId.valueOf(), true);
-        }});
+        self.subscriptionStatus.set(taskRevisionId.valueOf(),
+            self.subscribe('TaskRevisionById', taskRevisionId));
+        console.log('Subscription to task revision id ' + taskRevisionId);
       });
-
-      // Mark the contest subscription as ready after all other subscription
-      // are queued. This avoids a possible race condition with isLoaded helper.
-      self.data.subscriptionStatus.set('contestByCodename', true);
     }
-  });
-});
+  };
+
+  this.contestSubscriptionHandle.set(this.subscribe('ContestByCodename',
+      this.routeContestCodename.get(),
+      {onReady: subscribeToTasksAndRevisions}));
+};
+/**
+ * Unsubscribes from the contest collection and from all related tasks and
+ * task revisions.
+ *
+ * Warning: run this nonreactively.
+ *
+ * @private (do not export)
+ */
+const _unsubscribeFromContestData = function() {
+  if (!_.isNull(this.contestSubscriptionHandle.get())) {
+    console.log('Unsubscribing from contest');
+    this.contestSubscriptionHandle.get().stop();
+  }
+
+  if (!_.isNull(this.subscriptionStatus.get())) {
+    _.each(this.subscriptionStatus.all(), (subscriptionHandle, key) => {
+      console.log('Unsubscribing from object id ' + key);
+      subscriptionHandle.stop();
+    });
+  }
+};
 
 /**
  * Checks if all the subscriptions (including the dynamic ones) are ready.
@@ -74,13 +111,21 @@ Template.contestPageLayout.onCreated(function() {
  * @return {Boolean}
  */
 const _isLoaded = function() {
+  const contestSubscriptionHandle = this.contestSubscriptionHandle.get();
   const subscriptionStatus = this.subscriptionStatus.all();
-  return _.every(subscriptionStatus);
+
+  if (_.isNull(contestSubscriptionHandle) ||
+      !contestSubscriptionHandle.ready()) {
+    return false;
+  }
+  return _.every(subscriptionStatus, (subscriptionHandle) => {
+    return subscriptionHandle.ready();
+  });
 };
 
 Template.contestPageLayout.helpers({
   isLoaded: function() {
-    return _isLoaded.apply(this);
+    return _isLoaded.apply(Template.instance());
   },
 
   /**
@@ -90,6 +135,6 @@ Template.contestPageLayout.helpers({
    * @return {Boolean} True if ok, false otherwise.
    */
   validateObjects: function() {
-    return validateContestObjects.apply(this);
+    return validateContestObjects(this);
   },
 });

@@ -3,9 +3,6 @@
 // APIs and collections.
 import {Tasks} from '../api/tasks.js';
 import {TaskRevisions} from '../api/taskRevisions.js';
-// Models.
-import {Task} from '../models/Task.js';
-import {TaskRevision} from '../models/TaskRevision.js';
 // Libs.
 import {getRouteContest} from './routeContestUtils.js';
 // Requires.
@@ -22,26 +19,26 @@ const should = require('should');
  * This assumes routeContestCodename and routeTaskCodename to be in the given
  * context.
  *
+ * @param {Object} context Context object.
  * @return {?Task}
  */
-export const getRouteTask = function() {
-  should(this.routeContestCodename).be.String();
-  should(this.routeTaskCodename).be.String();
+export const getRouteTask = function(context) {
+  should(context.routeContestCodename).be.String();
+  should(context.routeTaskCodename).be.String();
 
-  const routeContest = getRouteContest.apply(this);
+  const routeContest = getRouteContest(context);
   should(routeContest.isLoaded()).be.true();
 
-  const routeTask = new Task(
-    Tasks.findOne({codename: this.routeTaskCodename}));
+  const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
 
-  if (!routeTask.isLoaded()) {
+  if (!routeTask) {
     return null;
   } else {
     const isTaksInContest = _.some(routeContest.tasks, (taskData) => {
       return taskData.taskId.valueOf() === routeTask._id.valueOf();
     });
     if (isTaksInContest) {
-      return Task;
+      return routeTask;
     } else {
       return null;
     }
@@ -59,20 +56,20 @@ export const getRouteTask = function() {
  * This assumes routeContestCodename and routeTaskCodename to be in the given
  * context.
  *
+ * @param {Object} context Context object.
  * @return {?TaskRevision}
  */
-export const getRouteTaskRevision = function() {
-  should(this.routeContestCodename).be.String();
-  should(this.routeTaskCodename).be.String();
+export const getRouteTaskRevision = function(context) {
+  should(context.routeContestCodename).be.String();
+  should(context.routeTaskCodename).be.String();
 
-  const routeContest = getRouteContest.apply(this);
+  const routeContest = getRouteContest(context);
   should(routeContest.isLoaded()).be.true();
 
-  if (!getRouteTask.apply(this)) {
+  if (!getRouteTask(context)) {
     return null;
   } else {
-    const routeTask = new Task(
-      Tasks.findOne({codename: this.routeTaskCodename}));
+    const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
     should(routeTask.isLoaded()).be.true();
 
     const routeTaskData = _.find(routeContest.tasks, (taskData) => {
@@ -80,9 +77,8 @@ export const getRouteTaskRevision = function() {
     });
     should(routeTaskData).be.Object();
 
-    const routeTaskRevision = new TaskRevision(TaskRevisions.findOne({
-      _id: routeTaskData.taskRevisionId
-    }));
+    const routeTaskRevision =
+        TaskRevisions.findOne({_id: routeTaskData.taskRevisionId});
     should(routeTaskRevision.isLoaded()).be.true();
 
     return routeTaskRevision;
@@ -99,14 +95,15 @@ export const getRouteTaskRevision = function() {
  * This assumes routeContestCodename and routeTaskCodename to be in the given
  * context.
  *
+ * @param {Object} context Context object.
  * @return {Boolean} True if ok, false otherwise.
  */
-export const validateTaskObjects = function() {
-  should(this.routeContestCodename).be.String();
-  should(this.routeTaskCodename).be.String();
+export const validateTaskObjects = function(context) {
+  should(context.routeContestCodename).be.String();
+  should(context.routeTaskCodename).be.String();
 
-  const routeTask = getRouteTask.apply(this);
-  const routeTaskRevision = getRouteTaskRevision.apply(this);
+  const routeTask = getRouteTask(context);
+  const routeTaskRevision = getRouteTaskRevision(context);
 
   return !_.isNull(routeTask) && !_.isNull(routeTaskRevision);
 };

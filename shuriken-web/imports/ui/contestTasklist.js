@@ -1,29 +1,26 @@
 'use strict';
 
 import {Template} from 'meteor/templating';
+
 // APIs and collections.
 import {Tasks} from '../api/tasks.js';
-// Models.
-import {Task} from '../models/Task.js';
 // Libs.
 import {getRouteContest} from '../lib/routeContestUtils.js';
-// UI fragments.
-import './contestTasklist.html';
+// Models.
+import {Task} from '../models/Task.js';
 // Requires.
 const _ = require('lodash');
 const should = require('should');
+// UI fragments.
+import './contestTasklist.html';
 
 /**
- * contestTasklist
- * ===============
- *
- * Context
- * -------
+ * #### Context
  *
  * @todo complete section.
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
+ *
  * All relevant data has already been loaded by contestPageLayout.
  * We don't need to subscribe to anything.
  *
@@ -41,7 +38,7 @@ Template.contestTasklist.helpers({
    * @return {Array<Task>}
    */
   contestTasks() {
-    const routeContest = getRouteContest.apply(this);
+    const routeContest = getRouteContest(this);
     should(routeContest.isLoaded()).be.true();
 
     return _.map(routeContest.tasks, (taskData) => {

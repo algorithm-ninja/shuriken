@@ -3,29 +3,25 @@
 // APIs and collections.
 import {Submissions} from '../api/submissions.js';
 // Libs.
-import {ReactiveVar} from 'meteor/reactive-var';
 import {getRouteContest, validateContestObjects}
     from '../lib/routeContestUtils.js';
-import {getRouteTask, validateTaskObjects}
+import {getRouteTask, getRouteTaskRevision, validateTaskObjects}
     from '../lib/routeTaskUtils.js';
+// Model.
+import {Submission} from '../models/Submission.js';
+// Requires.
+const should = require('should');
 // UI fragments.
 import './taskSubmissionsPage.html';
 import './submissionStatus.js';
 import './newSubmissionForm.js';
-// Requires.
-const should = require('should');
 
 /**
- * taskStatementPage
- * =================
- *
- * Context
- * -------
+ * #### Context
  *
  * @todo complete section.
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
  *
  * All relevant data from Contests, Tasks and TaskRevisions has already been
  * loaded by contestPageLayout.
@@ -39,18 +35,20 @@ Template.taskSubmissionsPage.onCreated(function() {
   let self = this;
 
   // If validateContestObjects is false, we shouldn't be here!
-  should(validateContestObjects.apply(this.data)).be.true();
-  const routeContest = getRouteContest.apply(this.data);
+  should(validateContestObjects(Template.currentData())).be.true();
 
-  if (validateTaskObjects.apply(this.data)) {
-    const routeTask = getRouteTask.apply(this.data);
-    this.data.subscriptionStatus = new ReactiveVar(false);
+  this.autorun(function() {
+    // Listen for changes in the context.
+    const context = Template.currentData();
 
-    this.subscribe('SubmissionsForUserAndContestAndTask', routeContest._id,
-        routeTask._id, {onReady: () => {
-          self.data.subscriptionStatus.set(true);}
-        });
-  }
+    const routeContest = getRouteContest(context);
+    if (validateTaskObjects(context)) {
+      const routeTask = getRouteTask(context);
+      self.subscriptionStatus =
+          self.subscribe('SubmissionsForUserAndContestAndTask',
+              routeContest._id, routeTask._id);
+    }
+  });
 });
 
 
@@ -62,7 +60,51 @@ Template.taskSubmissionsPage.helpers({
    * @return {Boolean} True if ok, false otherwise.
    */
   validateObjects: function() {
-    return validateTaskObjects.apply(this);
+    return validateTaskObjects(this);
+  },
+
+  /**
+   * Returns the Contest object relative to the current route.
+   *
+   * @return {!Contest}
+   */
+  routeContest: function() {
+    return getRouteContest(this);
+  },
+
+  /**
+   * Returns the Task object relative to the current route.
+   *
+   * @return {!Task}
+   */
+  routeTask: function() {
+    return getRouteTask(this);
+  },
+
+  /**
+   * Returns the taskRevision Object for the current (route-defined) task.
+   * Will throw if validateObjects is false.
+   *
+   * @return {!ObjectId}
+   */
+  taskRevision: function() {
+    should(validateTaskObjects(this)).be.true();
+
+    const routeTaskRevision = getRouteTaskRevision(this);
+    return routeTaskRevision;
+  },
+
+  /**
+   * Returns the title for the current (route-defined) task.
+   * Will throw if validateObjects is false.
+   *
+   * @return {!ObjectId}
+   */
+  taskTitle: function() {
+    should(validateTaskObjects(this)).be.true();
+
+    const routeTaskRevision = getRouteTaskRevision(this);
+    return routeTaskRevision.title;
   },
 
   /**
@@ -72,7 +114,8 @@ Template.taskSubmissionsPage.helpers({
    * @return {Boolean} True if ready, false otherwise.
    */
   submissionsLoaded: function() {
-    return this.subscriptionStatus.get();
+    const templateInstance = Template.instance();
+    return templateInstance.subscriptionStatus.ready();
   },
 
   /**
@@ -82,8 +125,8 @@ Template.taskSubmissionsPage.helpers({
    * @return {Object}
    */
   submissions: function() {
-    const routeTask = getRouteTask.apply(this);
-    const routeContest = getRouteContest.apply(this);
+    const routeTask = getRouteTask(this);
+    const routeContest = getRouteContest(this);
 
     return Submissions.find({
       userId: Meteor.userId(),

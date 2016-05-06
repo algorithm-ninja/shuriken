@@ -39,11 +39,16 @@ should.Assertion.add('ObjectId', function() {
  * |                         | the user for the associtated        |           |
  * |                         | submission.                         |           |
  * +-------------------------+-------------------------------------+-----------+
+ * | isLost                  | Used to indicate that the job id    |     Y     |
+ * |                         | was not found in Kue.               |           |
+ * +-------------------------+-------------------------------------+-----------+
  *
  * Kue-related fields:
  * +-------------------------+-------------------------------------+-----------+
- * | kueJobId                | A string representing the job id in |     Y     |
- * |                         | Kue.                                |           |
+ * | kueJobId                | An integer representing the job id  |     Y     |
+ * |                         | in Kue.                             |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | kueData                 | Configuration data for the job.     |           |
  * +-------------------------+-------------------------------------+-----------+
  * | kueState                | A string representing the job       |     Y     |
  * |                         | status. The possible states are:    |           |
@@ -97,11 +102,12 @@ export class Evaluation {
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('_id')
         .and.have.properties('submissionId')
         .and.have.properties('taskRevisionId')
         .and.have.properties('isLive')
+        .and.have.properties('isLost')
         .and.have.properties('kueJobId')
+        .and.have.properties('kueData')
         .and.have.properties('kueState')
         .and.have.properties('kueCreatedAt')
         .and.have.properties('kueAttempts')
@@ -110,12 +116,16 @@ export class Evaluation {
         .and.have.properties('kueProgress')
         .and.have.properties('kueProgressData');
 
-    should(json._id).be.ObjectId();
+    if (_.has(json, '_id')) {
+      should(json._id).be.ObjectId();
+    }
     should(json.submissionId).be.ObjectId();
     should(json.taskRevisionId).be.ObjectId();
     should(json.isLive).be.Boolean();
+    should(json.isLost).be.Boolean();
 
-    should(json.kueJobId).be.String();
+    should(json.kueJobId).be.Number();
+    should(json.kueData).be.Object();
     should(json.kueState)
         .be.String()
         .and.equalOneOf('complete', 'failed', 'inactive', 'delayed');
@@ -133,11 +143,15 @@ export class Evaluation {
       should(json.kueProgressData).be.String();
     }
 
-    this._id = json._id;
+    if (_.has(json, '_id')) {
+      this._id = json._id;
+    }
     this.submissionId = json.submissionId;
     this.taskRevisionId = json.taskRevisionId;
     this.isLive = json.isLive;
+    this.isLost = json.isLost;
     this.kueJobId = json.kueJobId;
+    this.kueData = json.kueData;
     this.kueState = json.kueState;
     this.kueCreatedAt = json.kueCreatedAt;
     this.kueAttempts = json.kueAttempts;
@@ -146,22 +160,23 @@ export class Evaluation {
     this.kueProgress = json.kueProgress;
     this.kueProgressData = sanitizeHtml(json.kueProgressData);
 
-    this._loaded = true;
+    this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports an Evaluation object as JSON object.
+   * Exports an Evaluation object as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      _id: this._id,
       submissionId: this.submissionId,
       taskRevisionId: this.taskRevisionId,
       isLive: this.isLive,
+      isLost: this.isLost,
       kueJobId: this.kueJobId,
       kueState: this.kueState,
+      kueData: this.kueData,
       kueCreatedAt: this.kueCreatedAt,
       kueAttempts: this.kueAttempts,
       kueError: this.kueError,
@@ -181,7 +196,7 @@ export class Evaluation {
 
    const json = kueJob.toJSON();
    should(json).be.Object();
-   should(json._id).be.equal(this.kueJobId);
+   should(json.id).be.equal(this.kueJobId);
 
    if (!_.isNil(json.state)) {
      should(json.state)
@@ -190,12 +205,12 @@ export class Evaluation {
      this.kueState = json.state;
    }
    if (!_.isNil(json.created_at)) {
-     should(json.created_at).be.Number();
-     this.kueCreatedAt = json.created_at;
+     should(+json.created_at).be.Number();
+     this.kueCreatedAt = +json.created_at;
    }
    if (!_.isNil(json.attempts)) {
-     should(json.result).be.Number();
-     this.kueAttempts = json.attempts;
+     should(json.attempts.made).be.Number();
+     this.kueAttempts = json.attempts.made;
    }
    if (!_.isNil(json.error)) {
      this.kueError = json.error;

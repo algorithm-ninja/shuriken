@@ -1,7 +1,5 @@
 'use strict';
 
-import { Template } from 'meteor/templating';
-
 // UI elements.
 import './body.html';
 import './contestPageLayout.js';
@@ -9,13 +7,9 @@ import './taskStatementPage.js';
 import './taskSubmissionsPage.js';
 import '../styles/material-icons/material-icons.css';
 
-Template.registerHelper('equals', function (a, b) {
-  return a === b;
-});
-
 Router.route('/', function () {
   if (Meteor.userId()) {
-    this.layout('loggedContestantContestPage');
+    this.layout('contestPageLayout');
   } else {
     this.render('loginPage');
   }

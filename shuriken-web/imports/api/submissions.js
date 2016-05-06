@@ -1,7 +1,14 @@
 'use strict';
 
-import { Mongo } from 'meteor/mongo';
-export const Submissions = new Mongo.Collection('submissions');
+import {Mongo} from 'meteor/mongo';
+// Models.
+import {Submission} from '../models/Submission.js';
+
+export const Submissions = new Mongo.Collection('submissions', {
+  idGeneration: 'MONGO',
+  transform: (obj) => {return new Submission(obj);}
+});
+
 
 if (Meteor.isServer) {
   /**
@@ -18,7 +25,7 @@ if (Meteor.isServer) {
   /**
    * Publishes all Submissions objects for the current user and given ContestId.
    *
-   * @param {String} contestId The contest unique ObjectId.
+   * @param {!ObjectId} contestId The contest unique ObjectId.
    */
   Meteor.publish('AllSubmissionsForUserAndContest', function(contestId) {
     if (!this.userId) {
@@ -27,15 +34,15 @@ if (Meteor.isServer) {
 
     return Submissions.find({
       userId: this.userId,
-      constestId: contestId,
+      contestId: contestId,
     });
   });
 
   /**
    * Publishes all submissions for a specific user and task
    *
-   * @param {String} contestId The contest ObjectId.
-   * @param {String} taskId The task ObjectId.
+   * @param {!ObjectId} contestId The contest ObjectId.
+   * @param {!ObjectId} taskId The task ObjectId.
    */
   Meteor.publish(
       'SubmissionsForUserAndContestAndTask', function(contestId, taskId) {
@@ -45,10 +52,8 @@ if (Meteor.isServer) {
 
     return Submissions.find({
       userId: this.userId,
-      constestId: contestId,
+      contestId: contestId,
       taskId: taskId,
     });
   });
 }
-
-Meteor.methods({});

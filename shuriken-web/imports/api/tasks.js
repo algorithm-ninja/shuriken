@@ -1,8 +1,13 @@
 'use strict';
 
-import { Mongo } from 'meteor/mongo';
+import {Mongo} from 'meteor/mongo';
+// Models.
+import {Task} from '../models/Task.js';
 
-export const Tasks = new Mongo.Collection('tasks');
+export const Tasks = new Mongo.Collection('tasks', {
+  idGeneration: 'MONGO',
+  transform: (obj) => {return new Task(obj);}
+});
 
 if (Meteor.isServer) {
   /**
@@ -18,7 +23,7 @@ if (Meteor.isServer) {
    * Publishes the Task object for a specific ObjectId.
    *
    * @todo Check that the user is allowed to view the task.
-   * @param {String} taskId The task ObjectId.
+   * @param {!ObjectId} taskId The task ObjectId.
    */
   Meteor.publish('TaskById', function(taskId) {
     return Tasks.find({_id: taskId}, {limit: 1});
@@ -28,7 +33,7 @@ if (Meteor.isServer) {
    * Publishes the Task object for a specific taskCodename.
    *
    * @todo Check that the user is allowed to view the task.
-   * @param {String} taskCodename The task codename.
+   * @param {!ObjectId} taskCodename The task codename.
    */
   Meteor.publish('TaskByCodename', function(taskCodename) {
     return Tasks.find({codename: taskCodename}, {limit: 1});

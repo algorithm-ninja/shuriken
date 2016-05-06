@@ -1,8 +1,8 @@
 <template name="contestTasklist">
   <div class = "panel">
     <div class="list-group framed">
-      {{#each contestTasks}}
-        {{> task }}
+      {{#each contestTask in contestTasks}}
+        {{> task contestTask}}
       {{/each}}
     </div>
   </div>

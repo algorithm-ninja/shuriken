@@ -53,26 +53,28 @@ export class Task {
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('_id')
         .and.have.properties('codename');
 
-    should(json._id).be.ObjectId();
+    if (_.has(json, '_id')) {
+      should(json._id).be.ObjectId();
+    }
     should(json.codename).be.String();
 
-    this._id = json._id;
+    if (_.has(json, '_id')) {
+      this._id = json._id;
+    }
     this.codename = json.codename;
 
-    this._loaded = true;
+    this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports a Task as JSON object.
+   * Exports a Task as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      _id: this._id,
       codename: this.codename,
     };
   }

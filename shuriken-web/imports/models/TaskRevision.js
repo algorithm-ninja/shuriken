@@ -64,13 +64,14 @@ export class TaskRevision {
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('_id')
         .and.have.properties('taskId')
         .and.have.properties('title')
         .and.have.properties('statementPdfUri')
         .and.have.properties('evaluatorConf');
 
-    should(json._id).be.ObjectId();
+    if (_.has(json, '_id')) {
+      should(json._id).be.ObjectId();
+    }
     should(json.taskId).be.ObjectId();
     should(json.title).be.String();
     should(json.statementPdfUri).be.String();
@@ -78,23 +79,24 @@ export class TaskRevision {
       should(json.evaluatorConf).be.Object();
     }
 
-    this._id = json._id;
+    if (_.has(json, '_id')) {
+      this._id = json._id;
+    }
     this.taskId = json.taskId;
     this.title = json.title;
     this.statementPdfUri = json.statementPdfUri;
     this.evaluatorConf = json.evaluatorConf;
 
-    this._loaded = true;
+    this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports a TaskRevision as JSON object.
+   * Exports a TaskRevision as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      _id: this._id,
       taskId: this.taskId,
       title: this.title,
       statementPdfUri: this.statementPdfUri,

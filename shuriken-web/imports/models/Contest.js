@@ -58,12 +58,13 @@ export class Contest {
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('_id')
         .and.have.properties('codename')
         .and.have.properties('title')
         .and.have.properties('tasks');
 
-    should(json._id).be.ObjectId();
+    if (_.has(json, '_id')) {
+      should(json._id).be.ObjectId();
+    }
     should(json.codename).be.String();
     should(json.title).be.String();
     should(json.tasks).be.Array();
@@ -78,22 +79,23 @@ export class Contest {
       should(taskDescription.taskRevisionId).be.ObjectId();
     });
 
-    this._id = json._id;
+    if (_.has(json, '_id')) {
+      this._id = json._id;
+    }
     this.codename = json.codename;
     this.title = json.title;
     this.tasks = json.tasks;
 
-    this._loaded = true;
+    this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports a Contest object as JSON object.
+   * Exports a Contest object as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      _id: this._id,
       codename: this.codename,
       title: this.title,
       tasks: this.tasks,

@@ -26,7 +26,7 @@ should.Assertion.add('ObjectId', function() {
  * | _id                     | Submission unique ObjectId,         |     Y     |
  * |                         | defined by mongo.                   |           |
  * +-------------------------+-------------------------------------+-----------+
- * | userId                  | User unique ObjectId.               |     Y     |
+ * | userId                  | User unique idenfier (STRING).      |     Y     |
  * +-------------------------+-------------------------------------+-----------+
  * | contestId               | Contest unique ObjectId.            |     Y     |
  * +-------------------------+-------------------------------------+-----------+
@@ -54,36 +54,38 @@ export class Submission {
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('_id')
         .and.have.properties('userId')
         .and.have.properties('contestId')
         .and.have.properties('taskId')
         .and.have.properties('submissionTime');
 
-    should(json._id).be.ObjectId();
-    should(json.userId).be.ObjectId();
+    if (_.has(json, '_id')) {
+      should(json._id).be.ObjectId();
+    }
+    should(json.userId).be.String();
     should(json.contestId).be.ObjectId();
     should(json.taskId).be.ObjectId();
     //FIXME: better type?
     should(json.submissionTime).be.Number();
 
-    this._id = json._id;
+    if (_.has(json, '_id')) {
+      this._id = json._id;
+    }
     this.userId = json.userId;
     this.contestId = json.contestId;
     this.taskId = json.taskId;
     this.submissionTime = json.submissionTime;
 
-    this._loaded = true;
+    this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports a Submission object as JSON object.
+   * Exports a Submission object as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      _id: this._id,
       userId: this.userId,
       contestId: this.contestId,
       taskId: this.taskId,

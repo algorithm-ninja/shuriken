@@ -1,8 +1,13 @@
 'use strict';
 
-import { Mongo } from 'meteor/mongo';
+import {Mongo} from 'meteor/mongo';
+// Models.
+import {Contest} from '../models/Contest.js';
 
-export const Contests = new Mongo.Collection('contests');
+export const Contests = new Mongo.Collection('contests', {
+  idGeneration: 'MONGO',
+  transform: (obj) => {return new Contest(obj);}
+});
 
 if (Meteor.isServer) {
   /**

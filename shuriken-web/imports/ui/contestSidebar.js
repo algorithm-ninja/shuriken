@@ -5,16 +5,13 @@ import './contestTasklist.js';
 import './contestSidebar.html';
 
 /**
- * contestSidebar
- * ==============
+ * #### Context
  *
- * Context
- * -------
  *
  * @todo complete section
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
+ *
  * All relevant data has already been loaded by contestPageLayout.
  * We don't need to subscribe to anything.
  *

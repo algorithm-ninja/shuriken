@@ -3,14 +3,16 @@
     <h1>{{taskTitle}} (<tt>{{routeTaskCodename}}</tt>)</h1>
     <hr>
 
-    {{> newSubmissionForm this}}
+    {{> newSubmissionForm contestId=routeContest._id taskId=routeTask._id}}
+    <a href="/contest/{{routeContestCodename}}/task/{{routeTaskCodename}}/submissions" class="btn btn-info">
+      Past submissions
+    </a>
 
     <div class="row">
       <div class="col-md-12">
         <div class="panel">
           <div class="panel-body">
-            <object data="{{ taskStatementPdfUri}}" type="application/pdf" style="width:100%; height: 800px;">
-            </object>
+            {{> pdfViewer taskStatementPdfUri}}
           </div>
         </div>
       </div>
@@ -20,4 +22,10 @@
       Not available :-(
     </h3>
   {{/if}}
+</template>
+
+<template name="pdfViewer">
+  <p>PDF url: {{this}}</p>
+  <object data="{{this}}" type="application/pdf" style="width:100%; height: 800px;">
+  </object>
 </template>

@@ -1,19 +1,25 @@
 <template name="taskSubmissionsPage">
-  <h1>{{taskTitle}} (<tt>{{routeTaskCodename}}</tt>)</h1>
-  <hr>
+  {{#if validateObjects}}
+    <h1>{{taskTitle}} (<tt>{{routeTaskCodename}}</tt>)</h1>
+    <hr>
 
-  {{> newSubmissionForm}}
+    {{> newSubmissionForm contestId=routeContest._id taskId=routeTask._id}}
+    <a href="/contest/{{routeContestCodename}}/task/{{routeTaskCodename}}/submissions" class="btn btn-info">
+      Past submissions
+    </a>
 
-  <h3>Your past submissions</h3>
-  {{#if submissionsLoaded}}
-    {{#if validateObjects}}
-      {{#each submissions}}
-        <!--{{> submission}}-->
+    <h3>Your past submissions</h3>
+    {{#if submissionsLoaded}}
+      {{#if equals submissions.count 0}}
+        <p>Looks like you don't have submissions for this problem.</p>
+      {{/if}}
+      {{#each submission in submissions}}
+        {{> submissionStatus submission=submission taskRevision=taskRevision}}
       {{/each}}
     {{else}}
-      <h4>Not available :-(</h4>
+      <h4>Loading...</h4>
     {{/if}}
   {{else}}
-    <h4>Loading...</h4>
+    <h3>Not available :-(</h3>
   {{/if}}
 </template>

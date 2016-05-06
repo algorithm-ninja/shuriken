@@ -1,26 +1,23 @@
 'use strict';
 
 // Libs.
-import {validateContestObjects} from '../lib/routeContestUtils.js';
-import {getRouteTaskRevision, validateTaskObjects}
+import {getRouteContest, validateContestObjects}
+    from '../lib/routeContestUtils.js';
+import {getRouteTask, getRouteTaskRevision, validateTaskObjects}
     from '../lib/routeTaskUtils.js';
+// Requires.
+const should = require('should');
 // UI fragments.
 import './taskStatementPage.html';
 import './newSubmissionForm.html';
-// Requires.
-const should = require('should');
 
 /**
- * taskStatementPage
- * =================
- *
- * Context
- * -------
+ * #### Context
  *
  * @todo complete section.
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
+ *
  * All relevant data has already been loaded by contestPageLayout.
  * We don't need to subscribe to anything.
  *
@@ -28,8 +25,9 @@ const should = require('should');
  * validated. We revalidate them anyway, but only as a safety measure.
  */
 Template.taskStatementPage.onCreated(function() {
-  should(validateContestObjects.apply(this.data)).be.true();
-  should(validateTaskObjects.apply(this.data)).be.true();
+  const context = Template.currentData();
+
+  should(validateContestObjects(context)).be.true();
 });
 
 
@@ -41,7 +39,25 @@ Template.taskStatementPage.helpers({
    * @return {Boolean} True if ok, false otherwise.
    */
   validateObjects: function() {
-    return validateTaskObjects.apply(this);
+    return validateTaskObjects(this);
+  },
+
+  /**
+   * Returns the Contest object relative to the current route.
+   *
+   * @return {!Contest}
+   */
+  routeContest: function() {
+    return getRouteContest(this);
+  },
+
+  /**
+   * Returns the Task object relative to the current route.
+   *
+   * @return {!Task}
+   */
+  routeTask: function() {
+    return getRouteTask(this);
   },
 
   /**
@@ -51,9 +67,9 @@ Template.taskStatementPage.helpers({
    * @return {!ObjectId}
    */
   taskRevisionId: function() {
-    should(validateTaskObjects.apply(this)).be.true();
+    should(validateTaskObjects(this)).be.true();
 
-    const routeTaskRevision = getRouteTaskRevision.apply(this);
+    const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision._id;
   },
 
@@ -64,9 +80,9 @@ Template.taskStatementPage.helpers({
    * @return {!ObjectId}
    */
   taskTitle: function() {
-    should(validateTaskObjects.apply(this)).be.true();
+    should(validateTaskObjects(this)).be.true();
 
-    const routeTaskRevision = getRouteTaskRevision.apply(this);
+    const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision.title;
   },
 
@@ -77,9 +93,9 @@ Template.taskStatementPage.helpers({
    * @return {!ObjectId}
    */
   taskStatementPdfUri: function() {
-    should(validateTaskObjects.apply(this)).be.true();
+    should(validateTaskObjects(this)).be.true();
 
-    const routeTaskRevision = getRouteTaskRevision.apply(this);
+    const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision.statementPdfUri;
   }
 });

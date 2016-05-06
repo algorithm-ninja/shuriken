@@ -4,16 +4,14 @@
 import './newSubmissionForm.html';
 
 /**
- * newSubmissionForm
- * =================
+ * #### Context
  *
- * Context
- * -------
- *
+ * - contestId
+ * - taskId
  * @todo complete section.
  *
- * Subscription contract
- * ---------------------
+ * #### Subscription contract
+ *
  * All relevant data has already been loaded by contestPageLayout.
  * We don't need to subscribe to anything.
  *
@@ -29,9 +27,9 @@ Template.newSubmissionForm.events({
     // Prevent default browser form submit
     event.preventDefault();
 
-    const taskId = this.currentTask._id._str;
+    const contestId = this.contestId;
+    const taskId = this.taskId;
 
-    Meteor.call('evaluations.enqueue', taskId, null);
-    Router.go('/task/submissions/' + this.currentTask.codename);
+    Meteor.call('submissions.insert', contestId, taskId);
   },
 });

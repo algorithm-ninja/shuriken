@@ -11,9 +11,6 @@ const queue = kue.createQueue();
 
 
 /**
- * BatchEvaluator
- * ==============
- *
  * This class implements a Batch Evaluator, i.e. a worker meant to evaluate
  * submissions tested against a known set of testcases.
  *
@@ -22,25 +19,23 @@ const queue = kue.createQueue();
  * according to some function.
  *
  *
- * Evaluation Structure
- * --------------------
+ * #### Evaluation Structure
  *
  * We expect testcases for a task requiring Batch correction to be partitioned
- * into M subtasks. Subtask i (1 <= i <= M) contains N_i testcases.
+ * into M subtasks. Subtask `i` (`1 <= i <= M`) contains N_i testcases.
  *
- * Let T_{i,j} be j-th testcase of the i-th subtask, and let S_{i,j} be its
- * score. The final score for the i-th subtask is calculated as
+ * Let `T_{i,j}` be j-th testcase of the `i`-th subtask, and let `S_{i,j}` be
+ * its score. The final score for the i-th subtask is calculated as
  *
- *     X_i = intraSubtaskAggregation(S_{i,1}, S_{i,2}, ..., S_{i,N_i}).
+ * > `X_i = intraSubtaskAggregation(S_{i,1}, S_{i,2}, ..., S_{i,N_i}).`
  *
  * In turn, the scores of the subtasks are aggregated into a final score for the
  * submission, namely
  *
- *     Score = interSubtaskAggregation(X_1, X_2, ..., X_M).
+ * > `Score = interSubtaskAggregation(X_1, X_2, ..., X_M).`
  *
  *
- * Evaluator Configuration
- * -----------------------
+ * #### Evaluator Configuration
  *
  * These are the fields currently expected by BatchEvaluator:
  *
@@ -111,8 +106,7 @@ const queue = kue.createQueue();
  * |                         | is chosen.                          |           |
  * +-------------------------+-------------------------------------+-----------+
  *
- * Subtask Configuration
- * ---------------------
+ * #### Subtask Configuration
  *
  * These are the fields currently expected by each subtask object:
  *
@@ -130,14 +124,14 @@ const queue = kue.createQueue();
  * |                         | the normal score of 10).            |           |
  * +-------------------------+-------------------------------------+-----------+
  *
- * Published result
- * ----------------
+ * #### Published result
  *
  * When the evaluation job is finished a score and a message are published.
  * They are published in the form of an object having the following fields:
  * - score: a positive number,
  * - maxScore: the maximum achievable score.
  *
+ * @class
  * @todo Provide a way to specify a baseuri corresponding to phony protocol
  *           shuriken://.
  * @todo Accept timeLimit and memoryLimit as config parameters for the subtasks.
@@ -555,7 +549,7 @@ class BatchEvaluator {
   }
 
   /**
-   * Main entry point. Evaluate the submission.
+   * Main entry point. Evaluates the submission.
    */
   run() {
     this._initTestcaseStructure(this._config.evaluationStructure);
