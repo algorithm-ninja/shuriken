@@ -51,13 +51,13 @@ Meteor.methods({
         //FIXME This is all hardcoded just as a placeholder.
         const queueName = 'evaluation';
         let job = queue.create(queueName, {
-          submissionFileUri: '',
-          tcInputFileUriSchema: '',
-          tcOutputFileUriSchema: '',
+          submissionFileUri: 'file:///tmp/test/soluzione.cpp',
+          tcInputFileUriSchema: 'file:///tmp/test/input%d.%d.txt',
+          tcOutputFileUriSchema: 'file:///tmp/test/output%d.%d.txt',
           intraSubtaskAggregation: 'sum',
           interSubtaskAggregation: 'sum',
           evaluationStructure: [
-            {nTestcases: 2},
+            {nTestcases: 4},
             {nTestcases: 3, scoreMultiplier: 1.5},
             {nTestcases: 2}
           ],

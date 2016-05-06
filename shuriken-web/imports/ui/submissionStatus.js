@@ -146,6 +146,7 @@ Template.submissionStatus.helpers({
     switch (evaluation.kueState) {
       case 'active':
       case 'complete':
+        return evaluation.kueProgressData;
       case 'failed':
         return evaluation.kueError;
       case 'inactive':

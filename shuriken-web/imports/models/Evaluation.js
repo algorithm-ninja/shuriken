@@ -53,6 +53,7 @@ should.Assertion.add('ObjectId', function() {
  * | kueState                | A string representing the job       |     Y     |
  * |                         | status. The possible states are:    |           |
  * |                         | - 'complete'                        |           |
+ * |                         | - 'active'                          |           |
  * |                         | - 'failed'                          |           |
  * |                         | - 'inactive' (queued)               |           |
  * |                         | - 'delayed'                         |           |
@@ -128,7 +129,8 @@ export class Evaluation {
     should(json.kueData).be.Object();
     should(json.kueState)
         .be.String()
-        .and.equalOneOf('complete', 'failed', 'inactive', 'delayed');
+        .and.equalOneOf('complete', 'active', 'failed', 'inactive', 'delayed');
+
     should(json.kueCreatedAt).be.Number();
     should(json.kueAttempts).be.Number();
 
@@ -158,8 +160,11 @@ export class Evaluation {
     this.kueError = json.kueError;
     this.kueResult = json.kueResult;
     this.kueProgress = json.kueProgress;
-    this.kueProgressData = sanitizeHtml(json.kueProgressData);
-
+    //FIXME Sanitize HTML, something like:
+    // this.kueProgressData = sanitizeHtml(json.kueProgressData, {
+    //     allowedTags: sanitizeHtml.defaults.allowedTags.concat(['style']),
+    // });
+    this.kueProgressData = json.kueProgressData;
     this._loaded = _.has(json, '_id');
   }
 
@@ -201,7 +206,7 @@ export class Evaluation {
    if (!_.isNil(json.state)) {
      should(json.state)
          .be.String()
-         .and.equalOneOf('complete', 'failed', 'inactive', 'delayed');
+         .and.equalOneOf('complete', 'active', 'failed', 'inactive', 'delayed');
      this.kueState = json.state;
    }
    if (!_.isNil(json.created_at)) {
@@ -223,12 +228,16 @@ export class Evaluation {
      this.kueResult = json.result;
    }
    if (!_.isNil(json.progress)) {
-     should(json.progress).be.Number();
-     this.kueProgress = json.progress;
+     should(+json.progress).be.Number();
+     this.kueProgress = +json.progress;
    }
    if (!_.isNil(json.progress_data)) {
      should(json.progress_data).be.String();
-     this.kueProgressData = sanitizeHtml(json.progress_data);
+     //FIXME Sanitize HTML!
+     // this.kueProgressData = sanitizeHtml(json.progress_data, {
+     //    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['style']),
+     // });
+     this.kueProgressData = json.progress_data;
    }
   }
 
