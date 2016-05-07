@@ -35,10 +35,10 @@ should.Assertion.add('ObjectId', function() {
  * |                         | clients and therefore must be       |           |
  * |                         | reachable from them.                |           |
  * +-------------------------+-------------------------------------+-----------+
- * | evaluatorConf           | An object representin the conf to   |     N     |
- * |                         | dispatched to the evaluators when   |           |
- * |                         | an evalation of this revision is    |           |
- * |                         | requested.                          |           |
+ * | evaluatorConf           | An object representing the conf to  |     N     |
+ * |                         | be dispatched to the evaluators     |           |
+ * |                         | when an evalation of this revision  |           |
+ * |                         | is requested.                       |           |
  * +-------------------------+-------------------------------------+-----------+
  *
  */
