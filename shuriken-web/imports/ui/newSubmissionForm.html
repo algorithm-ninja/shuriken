@@ -13,9 +13,20 @@
           </i>
         </div>
         <div class="col-md-11 nomargin padding-ns">
-          <a class="submit-submission btn btn-raised">
-            Submit
-          </a>
+          <div>
+            <textarea id="submission-data" rows="6" cols="50">
+#include <iostream>
+int main() {
+  unsigned int a, b;
+  std::cin >> a >> b;
+  std::cout << a + b << std::endl;
+}</textarea>
+          </div>
+          <div>
+            <a class="submit-submission btn btn-raised">
+              Submit
+            </a>
+          </div>
         </div>
       </div>
     </div>

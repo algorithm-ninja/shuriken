@@ -29,7 +29,8 @@ Template.newSubmissionForm.events({
 
     const contestId = this.contestId;
     const taskId = this.taskId;
+    const submissionData = document.getElementById('submission-data').value;
 
-    Meteor.call('submissions.insert', contestId, taskId);
+    Meteor.call('submissions.insert', contestId, taskId, submissionData);
   },
 });
