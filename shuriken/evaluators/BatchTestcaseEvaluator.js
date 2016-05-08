@@ -149,9 +149,7 @@ class BatchTestcaseEvaluator {
     should(this._validateUris()).be.true();
 
     // Step 5. Create the sandbox object.
-    this._sandbox = new Sandbox()
-        .timeLimit(this._config.timeLimit * 1000.0)
-        .memoryLimit(this._config.memoryLimit);
+    this._sandbox = new Sandbox();
 
     console.log('Evaluating inside ' + this._sandbox._tempdir);
     console.log(this._config);
@@ -298,6 +296,11 @@ class BatchTestcaseEvaluator {
       return path.basename(helperFileUri);
     });
 
+    //FIXME Receive these limits as program options.
+    this._sandbox
+        .timeLimit(10000)
+        .memoryLimit(100);
+
     switch (language) {
       case 'GCC_CXX':
         args = _.concat(['-Wall', '-Wextra', '-std=c++14', '-O3', '-o',
@@ -348,6 +351,10 @@ class BatchTestcaseEvaluator {
    */
   _runExecutable(relativeExecutableFilePath, language) {
     let status;
+
+    this._sandbox
+      .timeLimit(this._config.timeLimit * 1000.0)
+      .memoryLimit(this._config.memoryLimit);
 
     switch (language) {
       case 'GCC_CXX':
@@ -444,11 +451,16 @@ class BatchTestcaseEvaluator {
     }
 
     if (this._config.checkerSourceUri) {
-      this._compileFile(this._config.checkerSourceUri, null,
-          this._config.checkerLanguage);
-      status = this._evaluateSubmissionFile(this._config.submissionFileUri,
-          null, this._config.checkerLanguage);
+      this._fail('Checker correction not implemented!');
+      //this._compileFile(this._config.checkerSourceUri, null,
+      //    this._config.checkerLanguage);
+      //status = this._evaluateSubmissionFile(this._config.submissionFileUri,
+      //    null, this._config.checkerLanguage);
     } else {
+      //FIXME REceive these as program options.
+      this._sandbox
+          .timeLimit(10000)
+          .memoryLimit(100);
       status = this._sandbox.run('diff',
           ['--ignore-trailing-space', 'output.txt', 'correct.txt']);
     }
