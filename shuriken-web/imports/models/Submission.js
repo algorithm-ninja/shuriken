@@ -34,6 +34,8 @@ should.Assertion.add('ObjectId', function() {
  * +-------------------------+-------------------------------------+-----------+
  * | submissionTime          | Submission datetime.                |     Y     |
  * +-------------------------+-------------------------------------+-----------+
+ * | submissionFileUri       | The path to the actual file.        |     N     |
+ * +-------------------------+-------------------------------------+-----------+
  *
  * @todo Add support for date/time and submission file.
  */
@@ -57,7 +59,8 @@ export class Submission {
         .and.have.properties('userId')
         .and.have.properties('contestId')
         .and.have.properties('taskId')
-        .and.have.properties('submissionTime');
+        .and.have.properties('submissionTime')
+        .and.have.properties('submissionFileUri');
 
     if (_.has(json, '_id')) {
       should(json._id).be.ObjectId();
@@ -65,8 +68,8 @@ export class Submission {
     should(json.userId).be.String();
     should(json.contestId).be.ObjectId();
     should(json.taskId).be.ObjectId();
-    //FIXME: better type?
-    should(json.submissionTime).be.Number();
+    should(json.submissionTime).be.Number();  //FIXME: better type?
+    should(json.submissionFileUri).be.String();
 
     if (_.has(json, '_id')) {
       this._id = json._id;
@@ -75,6 +78,7 @@ export class Submission {
     this.contestId = json.contestId;
     this.taskId = json.taskId;
     this.submissionTime = json.submissionTime;
+    this.submissionFileUri = json.submissionFileUri;
 
     this._loaded = _.has(json, '_id');
   }
@@ -90,6 +94,7 @@ export class Submission {
       contestId: this.contestId,
       taskId: this.taskId,
       submissionTime: this.submissionTime,
+      submissionFileUri: this.submissionFileUri
     };
   }
 

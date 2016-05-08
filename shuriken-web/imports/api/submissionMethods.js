@@ -28,6 +28,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
     contestId: contest._id,
     taskId: task._id,
     submissionTime: submissionTime,
+    submissionFileUri: submissionFileUri
   });
 
   Submissions.insert(submission.toJson(), function(err, submissionId) {
@@ -40,7 +41,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
 
       let payload = taskRevision.evaluatorConf;
       Object.assign(payload, {
-        submissionFileUri: 'file://' + submissionFileUri
+        submissionFileUri: 'file://' + submission.submissionFileUri
       });
 
       let job = queue.create(queueName, payload);
