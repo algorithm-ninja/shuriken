@@ -23,6 +23,7 @@ if (Meteor.isServer) {
 
 const _addSubmission = function(userId, contest, task, taskRevision,
     submissionFileUri, submissionTime) {
+  // Step 1. Create the submission object.
   const submission = new Submission({
     userId: userId,
     contestId: contest._id,
@@ -30,6 +31,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
     submissionTime: submissionTime,
   });
 
+  // Wait for the submission to be inserted in the database.
   Submissions.insert(submission.toJson(), function(err, submissionId) {
     if (err) {
       throw err;

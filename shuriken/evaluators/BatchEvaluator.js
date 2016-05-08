@@ -420,13 +420,15 @@ class BatchEvaluator {
 
       subtaskScore *=
           this._config.evaluationStructure[subtaskIndex - 1].scoreMultiplier;
+      maxSubtaskScore *=
+          this._config.evaluationStructure[subtaskIndex - 1].scoreMultiplier;
 
       if (subtaskIndex === 1) {
         score = subtaskScore;
-        maxScore = subtaskScore;
+        maxScore = maxSubtaskScore;
       } else {
         score = interSubtaskLambda(score, subtaskScore);
-        maxScore = interSubtaskLambda(maxScore, subtaskScore);
+        maxScore = interSubtaskLambda(maxScore, maxSubtaskScore);
       }
     }
 
@@ -519,7 +521,7 @@ class BatchEvaluator {
       message: 'In queue',
     });
 
-    queue.create('subjob', testcaseEvaluationConfiguration)
+    queue.create('subjob', _.clone(testcaseEvaluationConfiguration))
       .on('complete', function(result) {
         should(result)
             .be.Object()

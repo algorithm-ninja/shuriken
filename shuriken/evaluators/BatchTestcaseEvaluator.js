@@ -152,6 +152,9 @@ class BatchTestcaseEvaluator {
     this._sandbox = new Sandbox()
         .timeLimit(this._config.timeLimit * 1000.0)
         .memoryLimit(this._config.memoryLimit);
+
+    console.log('Evaluating inside ' + this._sandbox._tempdir);
+    console.log(this._config);
   }
 
   /**
