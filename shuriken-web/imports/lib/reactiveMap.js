@@ -68,4 +68,27 @@ export class ReactiveMap {
      this._allDeps.depend();
      return _.cloneDeep(this._data);
    }
+
+   /**
+    * Returns the number of keys currently stored. You can use it reactively.
+    *
+    * @return {Number}
+    */
+   size() {
+     return _.size(this.all());
+   }
+
+   /**
+    * Clears the structure.
+    */
+   clear() {
+     const oldData = this._data;
+     this._data = {};
+
+     this._allDeps.changed();
+     _.each(oldData, (value, key) => {
+       this._keyDeps[key].changed();
+     });
+   }
+
 }

@@ -18,6 +18,8 @@
     "ava": "^0.14.0"
   },
   "ava": {
-    "files": ["tests/*_tests.js"]
+    "files": [
+      "tests/*_tests.js"
+    ]
   }
 }
