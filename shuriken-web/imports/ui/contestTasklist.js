@@ -4,6 +4,7 @@ import {Template} from 'meteor/templating';
 
 // APIs and collections.
 import {Tasks} from '../api/tasks.js';
+import {Submissions} from '../api/submissions.js';
 // Libs.
 import {getRouteContest} from '../lib/routeContestUtils.js';
 // Models.
@@ -31,6 +32,17 @@ Template.contestTasklist.onCreated(function(){
   // Pass.
 });
 
+Template.tasklistTask.onCreated(function() {
+  const context = Template.currentData();
+  should(context)
+      .have.properties('contestId', 'taskId');
+
+  const contestId = context.contestId;
+  const taskId = context.taskId;
+  //FIXME subscribe to a counter, not the whole collection!
+  this.subscribe('SubmissionsForUserAndContestAndTask', contestId, taskId);
+});
+
 Template.contestTasklist.helpers({
   /**
    * Returns a list of the Task objects relevant for the current contest.
@@ -38,7 +50,8 @@ Template.contestTasklist.helpers({
    * @return {Array<Task>}
    */
   contestTasks() {
-    const routeContest = getRouteContest(this);
+    const context = this;
+    const routeContest = getRouteContest(context);
     should(routeContest.isLoaded()).be.true();
 
     return _.map(routeContest.tasks, (taskData) => {
@@ -49,4 +62,19 @@ Template.contestTasklist.helpers({
       return taskObj;
     });
   },
+
+  routeContest() {
+    const context = this;
+    return getRouteContest(context);
+  }
+});
+
+Template.tasklistTask.helpers({
+  'submissionCount'() {
+    return Submissions.find({
+      userId: Meteor.userId(),
+      contestId: this.contestId,
+      taskId: this.taskId,
+    }).count();
+  }
 });

@@ -1,0 +1,10 @@
+<template name="pdfViewer">
+  <!-- We need force a rerender of the whole template -->
+  {{#if uriChanged}}
+      Loading PDF viewer...
+      {{setUriChangedFalse}}
+  {{else}}
+    <object data="{{uri}}" type="application/pdf" style="width:100%; height: 800px;">
+    </object>
+  {{/if}}
+</template>

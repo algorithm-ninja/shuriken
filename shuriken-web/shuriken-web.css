@@ -64,6 +64,7 @@ a.task-link .list-group-item-heading {
   line-height: 15px !important;
   color: gray !important;
   font-family: monospace;
+  margin-bottom: 10px;
 }
 
 .padding-ns {

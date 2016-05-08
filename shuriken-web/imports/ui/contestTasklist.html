@@ -2,17 +2,24 @@
   <div class = "panel">
     <div class="list-group framed">
       {{#each contestTask in contestTasks}}
-        {{> task contestTask}}
+        {{> tasklistTask
+            contestCodename=routeContestCodename
+            contestId=routeContest._id
+            taskCodename=contestTask.codename
+            taskId=contestTask._id}}
       {{/each}}
     </div>
   </div>
 </template>
 
-<template name="task">
-  <a href="/contest/{{../routeContestCodename}}/task/{{codename}}" class="list-group-item task-link">
+<template name="tasklistTask">
+  <a href="/contest/{{contestCodename}}/task/{{taskCodename}}" class="list-group-item task-link">
     <div>
-      <h4 class="list-group-item-heading">{{codename}}</h4>
-      <p class="list-group-item-text">Some text here</p>
+      <h4 class="list-group-item-heading">{{taskCodename}}</h4>
+      <p class="list-group-item-text">
+        You have {{submissionCount}}
+        <a href="/contest/{{contestCodename}}/task/{{taskCodename}}/submissions">submissions</a>.
+      </p>
     </div>
   </a>
 </template>

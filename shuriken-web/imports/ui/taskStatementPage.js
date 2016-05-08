@@ -9,7 +9,8 @@ import {getRouteTask, getRouteTaskRevision, validateTaskObjects}
 const should = require('should');
 // UI fragments.
 import './taskStatementPage.html';
-import './newSubmissionForm.html';
+import './newSubmissionForm.js';
+import './pdfViewer.js';
 
 /**
  * #### Context
