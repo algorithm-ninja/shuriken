@@ -216,6 +216,15 @@ Template.submissionStatus.helpers({
     }
   },
 
+  'hasProgressData'() {
+    if (_hasLiveEvaluation(this)) {
+      const evaluation = _selectLiveEvaluation(this);
+      return evaluation.kueProgressData.trim().length > 0;
+    } else {
+      return false;
+    }
+  },
+
   'progressData'() {
     if (_hasLiveEvaluation(this)) {
       const evaluation = _selectLiveEvaluation(this);
