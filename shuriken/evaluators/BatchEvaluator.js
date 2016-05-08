@@ -335,6 +335,10 @@ class BatchEvaluator {
           break;
         case 'failed':
           message = 'Evaluation failed';
+          const error = testcaseEvaluationProgress.error;
+          if (!_.isNil(error)) {
+            message += ': ' + error;
+          }
           break;
         case 'complete':
           message = testcaseEvaluationProgress.message;
@@ -468,6 +472,7 @@ class BatchEvaluator {
     should(progress)
         .be.Object()
         .and.have.properties('state')
+        .and.have.properties('error')
         .and.have.properties('score')
         .and.have.properties('message');
 
@@ -495,6 +500,7 @@ class BatchEvaluator {
            ++testcaseIndex) {
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'unknown',
+          error: null,
           score: 0,
           message: 'Connecting...',
         }, true);
@@ -517,6 +523,7 @@ class BatchEvaluator {
                    testcaseEvaluationConfiguration) {
     this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
       state: 'inactive',
+      error: null,
       score: 0,
       message: 'In queue',
     });
@@ -537,13 +544,15 @@ class BatchEvaluator {
 
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'complete',
+          error: null,
           score: result.score,
           message: result.message,
         });
       }.bind(this))
-      .on('failed', function() {
+      .on('failed', function(error) {
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'failed',
+          error: error,
           score: 0.0,
           message: 'Evaluation failed',
         });
@@ -604,6 +613,7 @@ if (!module.parent) {
   queue.process('evaluation', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
+      console.error(err);
       done(err, {});
     });
     d.run(() => {

@@ -250,7 +250,13 @@ Template.submissionStatus.helpers({
         case 'failed':
           return '#9d000d';
         case 'complete':
-          return '#4caf50';
+          const score = evaluation.kueResult.score;
+          const maxScore = evaluation.kueResult.maxScore;
+          if (score < maxScore - 1e-3) {
+            return '#4caf50';
+          } else {
+            return '#4caf50';
+          }
       }
     } else {
       return '#7f7f7f';

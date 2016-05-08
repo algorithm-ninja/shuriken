@@ -180,11 +180,13 @@ class BatchTestcaseEvaluator {
    *
    * @private
    * @param {string} message The debug message.
+   * @param {Object} err Error to throw (for chaining).
    */
-  _fail(message) {
+  _fail(message, err) {
     should(message).be.String();
 
     this._doneCallback(message, {});
+    throw err;
   }
 
   /**
@@ -391,7 +393,7 @@ class BatchTestcaseEvaluator {
         this._config.submissionLanguage);
 
     if (_.isNull(status.status) || !_.isNil(status.error)) {
-      return this._fail('Exception while compiling source file.');
+      return this._fail('Exception while compiling source file.', status);
     }
 
     if (!_.isNull(status.status) && status.status !== 0) {
@@ -437,7 +439,12 @@ class BatchTestcaseEvaluator {
         this._config.submissionLanguage);
 
     if (_.isNull(status.status) || !_.isNil(status.error)) {
-      return this._fail('Exception while executing solution.');
+      if (status.error.code == 'ETIMEDOUT') {
+        return this._publishEvaluation(0, 'Execution timed out');
+      } else {
+        return this._fail('Exception while executing solution, code ' +
+            status.error.code, status);
+      }
     }
 
     if (!_.isNull(status.status) && status.status !== 0) {
@@ -451,7 +458,8 @@ class BatchTestcaseEvaluator {
     }
 
     if (this._config.checkerSourceUri) {
-      this._fail('Checker correction not implemented!');
+      return this._fail('Checker correction not implemented!',
+        'Checker correction not implemented!');
       //this._compileFile(this._config.checkerSourceUri, null,
       //    this._config.checkerLanguage);
       //status = this._evaluateSubmissionFile(this._config.submissionFileUri,
@@ -467,7 +475,7 @@ class BatchTestcaseEvaluator {
 
     //FIXME Look at output instead of exit code.
     if (_.isNull(status.status) || !_.isNil(status.error)) {
-      return this._fail('Exception while checking the answer.');
+      return this._fail('Exception while checking the answer.', status);
     }
 
     if (!_.isNull(status.status) && status.status !== 0) {
@@ -485,6 +493,7 @@ if (!module.parent) {
   queue.process('subjob', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
+      console.error(err);
       done(err);
     });
     d.run(() => {
