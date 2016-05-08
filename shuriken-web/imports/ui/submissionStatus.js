@@ -219,7 +219,11 @@ Template.submissionStatus.helpers({
   'hasProgressData'() {
     if (_hasLiveEvaluation(this)) {
       const evaluation = _selectLiveEvaluation(this);
-      return evaluation.kueProgressData.trim().length > 0;
+      if (!_.isNull(evaluation.kueProgressData)) {
+        return evaluation.kueProgressData.trim().length > 0;
+      } else {
+        return false;
+      }
     } else {
       return false;
     }
