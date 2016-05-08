@@ -29,6 +29,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
     contestId: contest._id,
     taskId: task._id,
     submissionTime: submissionTime,
+    submissionFileUri: submissionFileUri
   });
 
   // Wait for the submission to be inserted in the database.
@@ -42,7 +43,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
 
       let payload = taskRevision.evaluatorConf;
       Object.assign(payload, {
-        submissionFileUri: 'file://' + submissionFileUri
+        submissionFileUri: 'file://' + submission.submissionFileUri
       });
 
       let job = queue.create(queueName, payload);
