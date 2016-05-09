@@ -128,12 +128,12 @@ Template.contestPageLayout.onCreated(function() {
     const taskIds = _.map(taskRevisionIds, (taskRevisionId) => {
       const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
       if (_.isNil(taskRevision) || !taskRevision.isLoaded()) {
-        return null;
+        return undefined;
       } else {
         return taskRevision.taskId;
       }
     });
-    self.tasksSub.run(_.filter(taskIds));
+    self.tasksSub.run(_.compact(taskIds));
   });
 });
 

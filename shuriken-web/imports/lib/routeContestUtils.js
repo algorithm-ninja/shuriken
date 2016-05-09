@@ -39,7 +39,7 @@ export const getRouteContest = function(context) {
   const routeContest =
       Contests.findOne({codename: getRouteContestCodename(context)});
   if (_.isNil(routeContest) || !routeContest.isLoaded()) {
-    return null;
+    return undefined;
   } else {
     return routeContest;
   }

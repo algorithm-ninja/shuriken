@@ -12,14 +12,23 @@ export const Submissions = new Mongo.Collection('submissions', {
 
 if (Meteor.isServer) {
   /**
+   * Publishes all Submissions objects for a given ContestId.
+   */
+  Meteor.publish('SubmissionsForContestId', function(contestId) {
+    return Submissions.find({contestId: contestId},
+        {fields: {submissionFileUri: false}});
+  });
+
+  /**
    * Publishes all Submissions objects for the current user.
    */
-  Meteor.publish('AllSubmissionsForUser', function() {
+  Meteor.publish('SubmissionsForUser', function() {
     if (!this.userId) {
       throw new Meteor.Error('Must be logged in.');
     }
 
-    return Submissions.find({userId: this.userId});
+    return Submissions.find({userId: this.userId},
+        {fields: {submissionFileUri: false}});
   });
 
   /**
@@ -27,7 +36,7 @@ if (Meteor.isServer) {
    *
    * @param {!ObjectId} contestId The contest unique ObjectId.
    */
-  Meteor.publish('AllSubmissionsForUserAndContest', function(contestId) {
+  Meteor.publish('SubmissionsForUserAndContest', function(contestId) {
     if (!this.userId) {
       throw new Meteor.Error('Must be logged in.');
     }
@@ -35,7 +44,7 @@ if (Meteor.isServer) {
     return Submissions.find({
       userId: this.userId,
       contestId: contestId,
-    });
+    }, {fields: {submissionFileUri: false}});
   });
 
   /**
@@ -54,6 +63,6 @@ if (Meteor.isServer) {
       userId: this.userId,
       contestId: contestId,
       taskId: taskId,
-    });
+    }, {fields: {submissionFileUri: false}});
   });
 }

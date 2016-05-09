@@ -107,7 +107,7 @@ const _selectLiveEvaluation = function(context) {
   } else if (_hasLiveEvaluation(context)) {
     return _liveEvaluation(context);
   } else {
-    return null;
+    return undefined;
   }
 };
 
@@ -203,7 +203,7 @@ Template.submissionStatus.helpers({
       const evaluation = _selectLiveEvaluation(this);
       return evaluation.kueState;
     } else {
-      return null;
+      return undefined;
     }
   },
 

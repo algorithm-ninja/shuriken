@@ -12,7 +12,7 @@ const should = require('should');
 
 /**
  * Return the Task object for the given codename. If no task is found or
- * the task does not belong to the given contest, return null.
+ * the task does not belong to the given contest, return undefined.
  *
  * Context
  * -------
@@ -33,7 +33,7 @@ export const getRouteTask = function(context) {
   const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
 
   if (_.isNil(routeTask) || !routeTask.isLoaded()) {
-    return null;
+    return undefined;
   } else {
     const taskId = routeTask._id;
     const contestTasks = ContestTasks.find({contestId: routeContest._id});
@@ -51,7 +51,7 @@ export const getRouteTask = function(context) {
     if (isTaksInContest) {
       return routeTask;
     } else {
-      return null;
+      return undefined;
     }
   }
 };
@@ -59,7 +59,7 @@ export const getRouteTask = function(context) {
 /**
  * Return the TaskRevision object for the given task codename and contest.
  * If no task is found or the task does not belong to the given contest,
- * return null.
+ * return undefined.
  *
  * Context
  * -------
@@ -78,7 +78,7 @@ export const getRouteTaskRevision = function(context) {
   should(routeContest.isLoaded()).be.true();
 
   if (!getRouteTask(context)) {
-    return null;
+    return undefined;
   } else {
     const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
     should(routeTask.isLoaded()).be.true();
@@ -100,7 +100,7 @@ export const getRouteTaskRevision = function(context) {
       const revisionId = contestTaskForTaskId.taskRevisionId;
       return TaskRevisions.findOne({_id: revisionId});
     } else {
-      return null;
+      return undefined;
     }
   }
 };
@@ -125,13 +125,13 @@ export const isValidTaskRoute = function(context) {
   const routeTask = getRouteTask(context);
   const routeTaskRevision = getRouteTaskRevision(context);
 
-  if (_.isNull(routeTask) || !routeTask.isLoaded()) {
+  if (_.isNil(routeTask) || !routeTask.isLoaded()) {
     console.warn('[isValidTaskRoute] routeTask is not loaded');
   }
-  if (_.isNull(routeTaskRevision) || !routeTaskRevision.isLoaded()) {
+  if (_.isNil(routeTaskRevision) || !routeTaskRevision.isLoaded()) {
     console.warn('[isValidTaskRoute] routeTaskRevision is not loaded');
   }
 
-  return !_.isNull(routeTask) && routeTask.isLoaded() &&
-         !_.isNull(routeTaskRevision) && routeTaskRevision.isLoaded();
+  return !_.isNil(routeTask) && routeTask.isLoaded() &&
+         !_.isNil(routeTaskRevision) && routeTaskRevision.isLoaded();
 };

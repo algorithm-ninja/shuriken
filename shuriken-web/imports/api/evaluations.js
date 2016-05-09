@@ -42,4 +42,30 @@ if (Meteor.isServer) {
       });
     }
   });
+
+  /**
+   * Publishes all live Evaluation objects for a specific task revision id.
+   * This only publishes:
+   * - submissionId
+   * - isLost
+   * - kueState
+   * - kueResult
+   * - isLive,
+   * - taskRevisionId
+   *
+   * @todo Forse ranking user to be logged in!
+   * @param {!ObjectId} submissionId The submission ObjectId.
+   */
+  Meteor.publish('LiveEvaluationsForTaskRevisionId', function(taskRevisionId) {
+    return Evaluations.find({
+      taskRevisionId: taskRevisionId,
+    }, {fields: {
+      submissionId: true,
+      taskRevisionId: true,
+      isLost: true,
+      isLive: true,
+      kueState: true,
+      kueResult: true
+    }});
+  });
 }

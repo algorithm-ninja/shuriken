@@ -59,8 +59,10 @@ export class Submission {
         .and.have.properties('userId')
         .and.have.properties('contestId')
         .and.have.properties('taskId')
-        .and.have.properties('submissionTime')
-        .and.have.properties('submissionFileUri');
+        .and.have.properties('submissionTime');
+    if (Meteor.isServer) {
+      should(json).have.properties('submissionFileUri');
+    }
 
     if (_.has(json, '_id')) {
       should(json._id).be.ObjectId();
@@ -69,7 +71,9 @@ export class Submission {
     should(json.contestId).be.ObjectId();
     should(json.taskId).be.ObjectId();
     should(json.submissionTime).be.Number();  //FIXME: better type?
-    should(json.submissionFileUri).be.String();
+    if (Meteor.isServer) {
+      should(json.submissionFileUri).be.String();
+    }
 
     if (_.has(json, '_id')) {
       this._id = json._id;
@@ -78,6 +82,8 @@ export class Submission {
     this.contestId = json.contestId;
     this.taskId = json.taskId;
     this.submissionTime = json.submissionTime;
+
+    // Note: on the client this will be undefined.
     this.submissionFileUri = json.submissionFileUri;
 
     this._loaded = _.has(json, '_id');
