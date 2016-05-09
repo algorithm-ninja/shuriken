@@ -343,7 +343,7 @@ class BatchTestcaseEvaluator {
             relativeEntryPointPath + '.bin',
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        Object.assign(status, status = this._sandbox.run('gcc', args));
+        Object.assign(status, this._sandbox.run('gcc', args));
         break;
 
       case 'JDK_JAVA':
