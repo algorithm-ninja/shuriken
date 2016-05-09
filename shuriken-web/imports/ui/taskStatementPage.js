@@ -1,9 +1,9 @@
 'use strict';
 
 // Libs.
-import {getRouteContest, validateContestObjects}
+import {getRouteContest, isValidContestRoute}
     from '../lib/routeContestUtils.js';
-import {getRouteTask, getRouteTaskRevision, validateTaskObjects}
+import {getRouteTask, getRouteTaskRevision, isValidTaskRoute}
     from '../lib/routeTaskUtils.js';
 // Requires.
 const should = require('should');
@@ -28,7 +28,7 @@ import './pdfViewer.js';
 Template.taskStatementPage.onCreated(function() {
   const context = Template.currentData();
 
-  should(validateContestObjects(context)).be.true();
+  should(isValidContestRoute(context)).be.true();
 });
 
 
@@ -39,8 +39,8 @@ Template.taskStatementPage.helpers({
    *
    * @return {Boolean} True if ok, false otherwise.
    */
-  validateObjects: function() {
-    return validateTaskObjects(this);
+  'isValidTaskRoute'() {
+    return isValidTaskRoute(this);
   },
 
   /**
@@ -48,7 +48,7 @@ Template.taskStatementPage.helpers({
    *
    * @return {!Contest}
    */
-  routeContest: function() {
+'routeContest'() {
     return getRouteContest(this);
   },
 
@@ -57,7 +57,7 @@ Template.taskStatementPage.helpers({
    *
    * @return {!Task}
    */
-  routeTask: function() {
+  'routeTask'() {
     return getRouteTask(this);
   },
 
@@ -67,8 +67,8 @@ Template.taskStatementPage.helpers({
    *
    * @return {!ObjectId}
    */
-  taskRevisionId: function() {
-    should(validateTaskObjects(this)).be.true();
+  'taskRevisionId'() {
+    should(isValidTaskRoute(this)).be.true();
 
     const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision._id;
@@ -80,8 +80,8 @@ Template.taskStatementPage.helpers({
    *
    * @return {!ObjectId}
    */
-  taskTitle: function() {
-    should(validateTaskObjects(this)).be.true();
+  'taskTitle'() {
+    should(isValidTaskRoute(this)).be.true();
 
     const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision.title;
@@ -93,8 +93,8 @@ Template.taskStatementPage.helpers({
    *
    * @return {!ObjectId}
    */
-  taskStatementPdfUri: function() {
-    should(validateTaskObjects(this)).be.true();
+  'taskStatementPdfUri'() {
+    should(isValidTaskRoute(this)).be.true();
 
     const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision.statementPdfUri;

@@ -2,6 +2,7 @@
 
 // APIs and collections.
 import {Contests} from '../api/contests.js';
+import {ContestTasks} from '../api/contestTasks.js';
 import {Tasks} from '../api/tasks.js';
 import {TaskRevisions} from '../api/taskRevisions.js';
 // Requires.
@@ -37,7 +38,11 @@ export const getRouteContest = function(context) {
 
   const routeContest =
       Contests.findOne({codename: getRouteContestCodename(context)});
-  return routeContest;
+  if (_.isNil(routeContest) || !routeContest.isLoaded()) {
+    return null;
+  } else {
+    return routeContest;
+  }
 };
 
 /**
@@ -51,7 +56,7 @@ export const getRouteContest = function(context) {
  * @param {Object} context Context object.
  * @return {Boolean} True if ok, false otherwise.
  */
-export const validateContestObjects = function(context) {
+export const isValidContestRoute = function(context) {
   should(getRouteContestCodename(context)).be.String();
 
   // Check the Contest exists.
@@ -63,26 +68,31 @@ export const validateContestObjects = function(context) {
     return false;
   }
 
-  const taskErrors = _.map(routeContest.tasks, (taskData) => {
-    const taskId = taskData.taskId;
-    const taskRevisionId = taskData.taskRevisionId;
-
-    const taskObj = Tasks.findOne({_id: taskId});
+  const contestTasks = ContestTasks.find({contestId: routeContest._id});
+  const taskErrors = contestTasks.map((contestTask) => {
+    const taskRevisionId = contestTask.taskRevisionId;
     const taskRevisionObj = TaskRevisions.findOne({_id: taskRevisionId});
 
-    if (!taskObj) {
-      console.error('[validateContestObjects] No Task found for given id "' +
-          taskId.valueOf() + '".');
-      return false;
-    }
-    if (!taskRevisionObj) {
+    if (!taskRevisionObj || !taskRevisionObj.isLoaded()) {
       console.error('[validateContestObjects] No TaskRevision found for ' +
           'given id "' + taskRevisionId.valueOf() + '".');
-      return false;
+      return true;
     }
 
-    return true;
+    const taskId = taskRevisionObj.taskId;
+    const taskObj = Tasks.findOne({_id: taskId});
+    if (!taskObj || !taskObj.isLoaded()) {
+      console.error('[validateContestObjects] No Task found for given id "' +
+          taskId.valueOf() + '".');
+      return true;
+    }
+
+    return false;
   });
 
-  return _.some(taskErrors);
+  if (_.some(taskErrors)) {
+    return false;
+  } else {
+    return true;
+  }
 };

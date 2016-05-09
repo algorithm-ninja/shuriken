@@ -12,10 +12,10 @@ should.Assertion.add('ObjectId', function() {
 });
 
 /**
- * Contest
- * =======
+ * ContestTask
+ * ===========
  *
- * Represents a contest.
+ * Specifies which taskRevisions are associated with a specific contest.
  *
  * Fields
  * ------
@@ -23,21 +23,17 @@ should.Assertion.add('ObjectId', function() {
  * +-------------------------+-------------------------------------+-----------+
  * | Field name              | Description                         |  Client?  |
  * +-------------------------+-------------------------------------+-----------+
- * | _id                     | Contest unique ObjectId, defined    |     Y     |
- * |                         | by mongo.                           |           |
+ * | _id                     | ContestTask unique ObjectId.        |     Y     |
  * +-------------------------+-------------------------------------+-----------+
- * | codename                | Contest (unique) codename, meant to |     Y     |
- * |                         | be a human-friendly string.         |           |
+ * | contestId               | Contest unique ObjectId.            |     Y     |
  * +-------------------------+-------------------------------------+-----------+
- * | title                   | Contest title.                      |     Y     |
+ * | taskRevisionId          | taskRevision unique ObjectId.       |     Y     |
  * +-------------------------+-------------------------------------+-----------+
  *
- * @todo Add support for users.
- * @todo Add start/end date.
  */
-export class Contest {
+export class ContestTask {
   /**
-   * Constructs a Contest object.
+   * Constructs a ContestTask object.
    *
    * @param {?Object} json If not nil, parse json and initialize object.
    */
@@ -49,36 +45,41 @@ export class Contest {
     }
   }
 
+  /**
+   * Initializes a ContestTask from JSON object.
+   *
+   * @param {!Object} json
+   */
   fromJson(json) {
     should(json)
         .be.Object()
-        .and.have.properties('codename')
-        .and.have.properties('title');
+        .and.have.properties('contestId')
+        .and.have.properties('taskRevisionId');
 
     if (_.has(json, '_id')) {
       should(json._id).be.ObjectId();
     }
-    should(json.codename).be.String();
-    should(json.title).be.String();
+    should(json.contestId).be.ObjectId();
+    should(json.taskRevisionId).be.ObjectId();
 
     if (_.has(json, '_id')) {
       this._id = json._id;
     }
-    this.codename = json.codename;
-    this.title = json.title;
+    this.contestId = json.contestId;
+    this.taskRevisionId = json.taskRevisionId;
 
     this._loaded = _.has(json, '_id');
   }
 
   /**
-   * Exports a Contest object as JSON object, stripping away the _id field.
+   * Exports a ContestTask as JSON object, stripping away the _id field.
    *
    * @return The json object.
    */
   toJson() {
     return {
-      codename: this.codename,
-      title: this.title,
+      contestId: this.contestId,
+      taskRevisionId: this.taskRevisionId,
     };
   }
 

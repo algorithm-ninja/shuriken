@@ -3,14 +3,13 @@
 import {Template} from 'meteor/templating';
 
 // APIs and collections.
-import {Tasks} from '../api/tasks.js';
+import {ContestTasks} from '../api/contestTasks.js';
 import {Submissions} from '../api/submissions.js';
+import {Tasks} from '../api/tasks.js';
+import {TaskRevisions} from '../api/taskRevisions.js';
 // Libs.
 import {getRouteContest} from '../lib/routeContestUtils.js';
-// Models.
-import {Task} from '../models/Task.js';
 // Requires.
-const _ = require('lodash');
 const should = require('should');
 // UI fragments.
 import './contestTasklist.html';
@@ -54,12 +53,17 @@ Template.contestTasklist.helpers({
     const routeContest = getRouteContest(context);
     should(routeContest.isLoaded()).be.true();
 
-    return _.map(routeContest.tasks, (taskData) => {
-      const taskObj = new Task(
-          Tasks.findOne({_id: taskData.taskId}));
-      should(taskObj.isLoaded()).be.true();
+    const contestTasks = ContestTasks.find({contestId: routeContest._id});
+    return contestTasks.map((contestTask) => {
+      const taskRevisionId = contestTask.taskRevisionId;
+      const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
+      should(taskRevision.isLoaded()).be.true();
 
-      return taskObj;
+      const taskId = taskRevision.taskId;
+      const task = Tasks.findOne({_id: taskId});
+      should(task.isLoaded()).be.true();
+
+      return task;
     });
   },
 

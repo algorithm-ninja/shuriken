@@ -482,6 +482,7 @@ class BatchTestcaseEvaluator {
     status = this._runUserExecutable(status.executableFilename,
         this._config.submissionLanguage);
 
+    console.log(status);
     if (_.isNull(status.status) || !_.isNil(status.error)) {
       if (status.error.code === 'ETIMEDOUT') {
         return this._publishEvaluation(0, 'Execution timed out');
@@ -494,6 +495,10 @@ class BatchTestcaseEvaluator {
     if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0,
           'Execution failed with exit code ' + status.status);
+    }
+    if (!_.isNull(status.signal)) {
+      return this._publishEvaluation(0.0,
+          'Execution killed with signal ' + status.signal);
     }
 
     // Check if solution is correct.

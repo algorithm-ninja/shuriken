@@ -239,7 +239,7 @@ Template.submissionStatus.helpers({
   },
 
   'headingColor'() {
-    if (_hasLiveEvaluation(this)) {
+    if (_hasLiveEvaluationForTaskRevisionId(this)) {
       const evaluation = _selectLiveEvaluation(this);
 
       switch (evaluation.kueState) {
@@ -248,15 +248,17 @@ Template.submissionStatus.helpers({
         case 'active':
           return evaluation.isLost ? '#7f7f7f' : '#03a9f4';
         case 'failed':
-          return '#9d000d';
+          return '#7f7f7f';
         case 'complete':
           const score = evaluation.kueResult.score;
           const maxScore = evaluation.kueResult.maxScore;
-          if (score < maxScore - 1e-3) {
-            return '#4caf50';
-          } else {
-            return '#4caf50';
+          let h = 120, s = 70, l = 40;
+          if (maxScore > 0) {
+            h = 0 + (120 - 0) * (score / maxScore);
           }
+          return `hsl(${h}, ${s}%, ${l}%)`;
+        case 'delayed':
+          return '#7f7f7f';
       }
     } else {
       return '#7f7f7f';

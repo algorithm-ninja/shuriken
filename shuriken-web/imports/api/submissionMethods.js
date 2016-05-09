@@ -2,6 +2,7 @@
 
 // Collections.
 import {Contests} from './contests.js';
+import {ContestTasks} from './contestTasks.js';
 import {Evaluations} from './evaluations.js';
 import {Submissions} from './submissions.js';
 import {Tasks} from './tasks.js';
@@ -10,6 +11,7 @@ import {TaskRevisions} from './taskRevisions.js';
 import {Evaluation} from '../models/Evaluation.js';
 import {Submission} from '../models/Submission.js';
 // Requires.
+const _ = require('lodash');
 const should = require('should');
 const temp = require('temp');
 const fs = require('fs');
@@ -86,9 +88,18 @@ Meteor.methods({
     const task = Tasks.findOne({_id: taskId});
     should(task.isLoaded()).be.true();
 
-    const taskRevisionId = contest.taskRevisionIdForTaskId(taskId);
-    // Let's load the taskRevision to make sure it exists.
-    const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
+    const contestTasks = ContestTasks.find({contestId: contestId});
+    const contestTaskForTaskId = _.find(contestTasks.fetch(), (contestTask) => {
+      const taskRevision =
+          TaskRevisions.findOne({_id: contestTask.taskRevisionId});
+      should(taskRevision.isLoaded()).be.true();
+
+      return taskRevision.taskId.valueOf() === taskId.valueOf();
+    });
+    should(contestTaskForTaskId.isLoaded()).be.true();
+
+    const taskRevision = TaskRevisions.findOne({
+        _id: contestTaskForTaskId.taskRevisionId});
     should(taskRevision.isLoaded()).be.true();
 
     // Save the data to a new file (in the filesystem) and create a submission

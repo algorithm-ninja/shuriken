@@ -18,14 +18,14 @@
     <div class="row">
       <div class="col-md-3">
         {{#if isLoaded}}
-          {{#if validateObjects}}
+          {{#if isValidContestRoute}}
             {{> contestSidebar this}}
           {{/if}}
         {{/if}}
       </div>
       <div class="col-md-9">
         {{#if isLoaded}}
-          {{#if validateObjects}}
+          {{#if isValidContestRoute}}
             {{> yield}}
           {{else}}
             <h3>Not available :-(</h3>

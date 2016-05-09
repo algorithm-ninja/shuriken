@@ -1,8 +1,10 @@
 'use strict';
 
+// APIs and collections
+import {ContestTasks} from '../api/contestTasks.js';
+import {TaskRevisions} from '../api/taskRevisions.js';
 // Libs.
-import {ReactiveMap} from '../lib/reactiveMap';
-import {getRouteContestCodename, getRouteContest, validateContestObjects}
+import {getRouteContest, isValidContestRoute}
     from '../lib/routeContestUtils.js';
 // Requires.
 const _ = require('lodash');
@@ -10,6 +12,64 @@ const should = require('should');
 // UI fragments
 import './contestPageLayout.html';
 import './contestSidebar.js';
+
+class DynamicSubscription {
+  constructor(func) {
+    this._func = func;
+    this._activeSubscriptions = {};
+    this._subscriptionBuffer = {};
+
+    this._firstTime = true;
+  }
+
+  subscribe(name, args) {
+    const key = _.join([name, args], '__');
+    if (_.has(this._subscriptionBuffer, key)) {
+      console.warn(`Ignoring multiple subscriptions to ${key}`);
+    } else {
+      if (!_.has(this._activeSubscriptions, key)) {
+        this._subscriptionBuffer[key] = Meteor.subscribe(name, args);
+      } else {
+        console.info(`Ignoring already existing subscription ${key}`);
+        this._subscriptionBuffer[key] = null;
+      }
+    }
+  }
+
+  _flushSubscriptions() {
+    _.each(this._activeSubscriptions, (sub, key) => {
+      if (!_.has(this._subscriptionBuffer, key)) {
+        console.info(`Removing subscription ${key}`);
+        sub.stop();
+        _.unset(this._activeSubscriptions, key);
+      }
+    });
+
+    _.each(this._subscriptionBuffer, (sub, key) => {
+      if (!_.has(this._activeSubscriptions, key)) {
+        should(sub).be.not.null();
+        console.info(`New subscription ${key}`);
+        this._activeSubscriptions[key] = sub;
+      }
+    });
+
+    this._subscriptionBuffer = {};
+    this._firstTime = false;
+  }
+
+  run(args) {
+    Tracker.nonreactive(() => {
+      this._func.apply(this, arguments);
+      this._flushSubscriptions();
+    });
+  }
+
+  ready() {
+    return !this._firstTime && _.every(this._activeSubscriptions, (sub) => {
+      return sub.ready();
+    });
+  }
+}
 
 /**
  * Main entry point for all contest-related pages.
@@ -26,80 +86,54 @@ import './contestSidebar.js';
 Template.contestPageLayout.onCreated(function() {
   let self = this;
 
-  // Note: non-reactive variable.
-  this.lastRouteContestCodename = null;
-  // Note: reactive variables.
-  this.contestSubscriptionHandle = new ReactiveVar(null);
-  this.subscriptionStatus = new ReactiveMap();
-
-  // Every time the route contest changes, stop the previous subscription
-  // to the Contest object (if any), and subscribe to the updated object.
-  this.autorun(function() {
-    const routeContestCodename = getRouteContestCodename(
-        Template.currentData());
-
-    if (_.isNull(self.lastRouteContestCodename) ||
-        (routeContestCodename !== self.lastRouteContestCodename)) {
-      Tracker.nonreactive(function() {
-        self.lastRouteContestCodename = routeContestCodename;
-
-        if (!_.isNull(self.contestSubscriptionHandle.get())) {
-          console.log('Stopping old subscription to ContestByCodename');
-          self.contestSubscriptionHandle.get().stop();
-        }
-        console.log(
-            `New subscription to ContestByCodename(${routeContestCodename})`);
-        self.contestSubscriptionHandle.set(self.subscribe('ContestByCodename',
-            routeContestCodename));
-      });
-    }
+  this.contestSub = new DynamicSubscription(function(codename) {
+    this.subscribe('ContestByCodename', codename);
   });
 
-  // Every time the Contest object changes, subscribe to the updated Task and
-  // TaskRevision objects.
-  this.autorun(function() {
-    const routeContestCodename = Tracker.nonreactive(
-        () => {return getRouteContestCodename(Template.currentData());});
-    should(routeContestCodename)
-        .equal(self.lastRouteContestCodename)
-        .and.be.not.null();
+  this.contestTasksSub = new DynamicSubscription(function(contestId) {
+    this.subscribe('ContestTasksByContestId', contestId);
+  });
 
-    Tracker.nonreactive(function() {
-      //FIXME Make this a little smarter, so that we don't renew all
-      //      submissions every time. For example, if only one of the tasks
-      //      changes, there is little point in stopping all other
-      //      subscriptions.
-      console.log(`Stopping dynamic subscription to contest objects ` +
-          `(${self.subscriptionStatus.size()} objects).`);
-
-      _.each(self.subscriptionStatus.all(), (subscriptionHandle, key) => {
-        console.log(`Unsubscribing from object id ${key}`);
-        subscriptionHandle.stop();
-      });
-
-      self.subscriptionStatus.clear();
+  this.taskRevisionsSub = new DynamicSubscription(function(taskRevionsIds) {
+    _.each(taskRevionsIds, (taskRevisionId) => {
+      this.subscribe('TaskRevisionById', taskRevisionId);
     });
+  });
 
-    // This subscribes to all changes in the Contest object.
-    const routeContest = getRouteContest(self.data);
-    if (routeContest) {
-      console.log('Starting dynamic subscription to contest objects.');
+  this.tasksSub = new DynamicSubscription(function(taskIds) {
+    _.each(taskIds, (taskId) => {
+      this.subscribe('TaskById', taskId);
+    });
+  });
 
-      // If we are here, the Contest is correctly loaded. Now let's load all
-      // Task and TaskRevision objects related to the current Contest object.
-      _.each(routeContest.tasks, (taskData) => {
-        const taskId = taskData.taskId;
-        const taskRevisionId = taskData.taskRevisionId;
+  this.autorun(function() {
+    const context = Template.currentData();
+    self.contestSub.run(context.routeContestCodename);
 
-        self.subscriptionStatus.set(taskId.valueOf(),
-            self.subscribe('TaskById', taskId));
-        console.log(`Subscription to task id ${taskId}`);
-
-        self.subscriptionStatus.set(taskRevisionId.valueOf(),
-            self.subscribe('TaskRevisionById', taskRevisionId));
-        console.log(`Subscription to task revision id ${taskRevisionId}`);
-      });
+    const contest = getRouteContest(context);
+    if (_.isNil(contest) || !contest.isLoaded()) {
+      return;
     }
+
+    const contestId = contest._id;
+    self.contestTasksSub.run(contestId);
+
+    const contestTasks = ContestTasks.find({contestId: contestId}).fetch();
+
+    const taskRevisionIds = _.map(contestTasks, (contestTask) => {
+      return contestTask.taskRevisionId;
+    });
+    self.taskRevisionsSub.run(taskRevisionIds);
+
+    const taskIds = _.map(taskRevisionIds, (taskRevisionId) => {
+      const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
+      if (_.isNil(taskRevision) || !taskRevision.isLoaded()) {
+        return null;
+      } else {
+        return taskRevision.taskId;
+      }
+    });
+    self.tasksSub.run(_.filter(taskIds));
   });
 });
 
@@ -110,16 +144,10 @@ Template.contestPageLayout.onCreated(function() {
  * @return {Boolean}
  */
 const _isLoaded = function() {
-  const contestSubscriptionHandle = this.contestSubscriptionHandle.get();
-  const subscriptionStatus = this.subscriptionStatus.all();
-
-  if (_.isNull(contestSubscriptionHandle) ||
-      !contestSubscriptionHandle.ready()) {
-    return false;
-  }
-  return _.every(subscriptionStatus, (subscriptionHandle) => {
-    return subscriptionHandle.ready();
-  });
+  return this.contestSub.ready() &&
+         this.contestTasksSub.ready() &&
+         this.taskRevisionsSub.ready() &&
+         this.tasksSub.ready();
 };
 
 Template.contestPageLayout.helpers({
@@ -133,13 +161,13 @@ Template.contestPageLayout.helpers({
    *
    * @return {Boolean} True if ok, false otherwise.
    */
-  validateObjects: function() {
+  isValidContestRoute: function() {
     // Warning: we have to check that _isLoaded is true, otherwise we may
     //     trigger unwanted errors. If the revision of a task changes suddenly,
     //     for example, validateObjects may be called before isLoaded, leading
     //     to errors.
     if (_isLoaded.apply(Template.instance())) {
-      return validateContestObjects(this);
+      return isValidContestRoute(this);
     } else {
       return false;
     }

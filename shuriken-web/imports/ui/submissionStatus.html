@@ -36,7 +36,7 @@
         <div class="row border-between nomargin">
           {{#if isLoaded}}
             {{#if hasLiveEvaluationForTaskRevisionId}}
-              <div class="col-md-7 evaluation-progress nopadding">
+              <div class="col-md-8 evaluation-progress nopadding">
                 {{#if hasProgressData}}
                   {{{progressData}}}
                 {{else}}
@@ -45,10 +45,10 @@
                   </div>
                 {{/if}}
               </div>
-              <div class="col-md-5" style="overflow: auto; padding: 5px 5px;">
+              <div class="col-md-4" style="overflow: auto; padding: 5px 5px;">
                 <!--<div class="btn btn-raised btn-sm"><i class="material-icons">code</i> Show code</div>-->
-                <h4>Job configuration:</h4>
-                <div style="font-family: monospace; white-space: pre;">
+                <p>Job configuration:</p>
+                <div style="font-family: monospace; white-space: pre; font-size: 10px;">
 {{jobConfiguration}}
                 </div>
               </div>

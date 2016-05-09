@@ -1,6 +1,7 @@
 'use strict';
 
 // APIs and collections.
+import {ContestTasks} from '../api/contestTasks.js';
 import {Tasks} from '../api/tasks.js';
 import {TaskRevisions} from '../api/taskRevisions.js';
 // Libs.
@@ -31,11 +32,21 @@ export const getRouteTask = function(context) {
 
   const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
 
-  if (!routeTask) {
+  if (_.isNil(routeTask) || !routeTask.isLoaded()) {
     return null;
   } else {
-    const isTaksInContest = _.some(routeContest.tasks, (taskData) => {
-      return taskData.taskId.valueOf() === routeTask._id.valueOf();
+    const taskId = routeTask._id;
+    const contestTasks = ContestTasks.find({contestId: routeContest._id});
+
+    const isTaksInContest = _.some(contestTasks.fetch(), (contestTask) => {
+      const taskRevisionId = contestTask.taskRevisionId;
+      const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
+
+      if (!_.isNil(taskRevision) && taskRevision.isLoaded()) {
+        return taskRevision.taskId.valueOf() === taskId.valueOf();
+      } else {
+        return false;
+      }
     });
     if (isTaksInContest) {
       return routeTask;
@@ -72,16 +83,25 @@ export const getRouteTaskRevision = function(context) {
     const routeTask = Tasks.findOne({codename: context.routeTaskCodename});
     should(routeTask.isLoaded()).be.true();
 
-    const routeTaskData = _.find(routeContest.tasks, (taskData) => {
-      return taskData.taskId.valueOf() === routeTask._id.valueOf();
+    const taskId = routeTask._id;
+    const contestTasks = ContestTasks.find({contestId: routeContest._id});
+    const contestTaskForTaskId = _.find(contestTasks.fetch(), (contestTask) => {
+      const taskRevisionId = contestTask.taskRevisionId;
+      const taskRevision = TaskRevisions.findOne({_id: taskRevisionId});
+
+      if (!_.isNil(taskRevision) && taskRevision.isLoaded()) {
+        return taskRevision.taskId.valueOf() === taskId.valueOf();
+      } else {
+        return false;
+      }
     });
-    should(routeTaskData).be.Object();
 
-    const routeTaskRevision =
-        TaskRevisions.findOne({_id: routeTaskData.taskRevisionId});
-    should(routeTaskRevision.isLoaded()).be.true();
-
-    return routeTaskRevision;
+    if (!_.isNil(contestTaskForTaskId) && contestTaskForTaskId.isLoaded()) {
+      const revisionId = contestTaskForTaskId.taskRevisionId;
+      return TaskRevisions.findOne({_id: revisionId});
+    } else {
+      return null;
+    }
   }
 };
 
@@ -98,12 +118,20 @@ export const getRouteTaskRevision = function(context) {
  * @param {Object} context Context object.
  * @return {Boolean} True if ok, false otherwise.
  */
-export const validateTaskObjects = function(context) {
+export const isValidTaskRoute = function(context) {
   should(context.routeContestCodename).be.String();
   should(context.routeTaskCodename).be.String();
 
   const routeTask = getRouteTask(context);
   const routeTaskRevision = getRouteTaskRevision(context);
 
-  return !_.isNull(routeTask) && !_.isNull(routeTaskRevision);
+  if (_.isNull(routeTask) || !routeTask.isLoaded()) {
+    console.warn('[isValidTaskRoute] routeTask is not loaded');
+  }
+  if (_.isNull(routeTaskRevision) || !routeTaskRevision.isLoaded()) {
+    console.warn('[isValidTaskRoute] routeTaskRevision is not loaded');
+  }
+
+  return !_.isNull(routeTask) && routeTask.isLoaded() &&
+         !_.isNull(routeTaskRevision) && routeTaskRevision.isLoaded();
 };

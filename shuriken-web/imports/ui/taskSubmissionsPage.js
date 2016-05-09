@@ -3,9 +3,9 @@
 // APIs and collections.
 import {Submissions} from '../api/submissions.js';
 // Libs.
-import {getRouteContest, validateContestObjects}
+import {getRouteContest, isValidContestRoute}
     from '../lib/routeContestUtils.js';
-import {getRouteTask, getRouteTaskRevision, validateTaskObjects}
+import {getRouteTask, getRouteTaskRevision, isValidTaskRoute}
     from '../lib/routeTaskUtils.js';
 // Model.
 import {Submission} from '../models/Submission.js';
@@ -35,14 +35,14 @@ Template.taskSubmissionsPage.onCreated(function() {
   let self = this;
 
   // If validateContestObjects is false, we shouldn't be here!
-  should(validateContestObjects(Template.currentData())).be.true();
+  should(isValidContestRoute(Template.currentData())).be.true();
 
   this.autorun(function() {
     // Listen for changes in the context.
     const context = Template.currentData();
 
     const routeContest = getRouteContest(context);
-    if (validateTaskObjects(context)) {
+    if (isValidTaskRoute(context)) {
       const routeTask = getRouteTask(context);
       self.subscriptionStatus =
           self.subscribe('SubmissionsForUserAndContestAndTask',
@@ -59,8 +59,8 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {Boolean} True if ok, false otherwise.
    */
-  validateObjects: function() {
-    return validateTaskObjects(this);
+  'isValidTaskRoute'() {
+    return isValidTaskRoute(this);
   },
 
   /**
@@ -68,7 +68,7 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {!Contest}
    */
-  routeContest: function() {
+  'routeContest'() {
     return getRouteContest(this);
   },
 
@@ -77,7 +77,7 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {!Task}
    */
-  routeTask: function() {
+  'routeTask'() {
     return getRouteTask(this);
   },
 
@@ -87,8 +87,8 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {!ObjectId}
    */
-  taskRevision: function() {
-    should(validateTaskObjects(this)).be.true();
+  'taskRevision'() {
+    should(isValidTaskRoute(this)).be.true();
 
     const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision;
@@ -100,8 +100,8 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {!ObjectId}
    */
-  taskTitle: function() {
-    should(validateTaskObjects(this)).be.true();
+  'taskTitle'() {
+    should(isValidTaskRoute(this)).be.true();
 
     const routeTaskRevision = getRouteTaskRevision(this);
     return routeTaskRevision.title;
@@ -113,7 +113,7 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {Boolean} True if ready, false otherwise.
    */
-  submissionsLoaded: function() {
+  'submissionsLoaded'() {
     const templateInstance = Template.instance();
     return templateInstance.subscriptionStatus.ready();
   },
@@ -124,7 +124,7 @@ Template.taskSubmissionsPage.helpers({
    *
    * @return {Object}
    */
-  submissions: function() {
+  'submissions'() {
     const routeTask = getRouteTask(this);
     const routeContest = getRouteContest(this);
 
