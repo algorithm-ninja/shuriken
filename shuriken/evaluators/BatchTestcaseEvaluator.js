@@ -7,6 +7,7 @@ const domain = require('domain');
 const kue = require('kue');
 const path = require('path');
 const should = require('should');
+const argv = require('minimist')(process.argv.slice(2));
 
 const queue = kue.createQueue();
 
@@ -37,6 +38,21 @@ const queue = kue.createQueue();
  * | memoryLimit             | A real number indicating how many   |     Y     |
  * |                         | MiB are available for the execution |           |
  * |                         | of submissionFile.                  |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalTimeLimit       | A real number indicating how many   |     Y     |
+ * |                         | seconds the internal operations     |           |
+ * |                         | (e.g. compilation and checking) may |           |
+ * |                         | be executed for.                    |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalMemoryLimit     | A real number indicating how many   |     Y     |
+ * |                         | MiB are available for the execution |           |
+ * |                         | of internal operations.             |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | timeLimitMultiplier     | The time limit multiplier used by   |     N     |
+ * |                         | this process.                       |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | memoryLimitMultiplier   | The memory limit multiplier used by |     N     |
+ * |                         | this process.                       |           |
  * +-------------------------+-------------------------------------+-----------+
  * | submissionLanguage      | A string identifying the language   |     N     |
  * |                         | used in the submissionFile. If null |           |
@@ -91,6 +107,11 @@ class BatchTestcaseEvaluator {
         'tcOutputFileUri', 'timeLimit', 'memoryLimit']);
 
     // Step 2. Set all non mandatory fields to the default values.
+    this._config.timeLimitMultiplier =
+        _.get(argv, 'time-limit-multiplier', 1);
+    this._config.memoryLimitMultiplier =
+        _.get(argv, 'memory-limit-multiplier', 1);
+
     this._config.graderSourceUri =
         _.get(this._config, 'graderSourceUri', null);
 
@@ -113,12 +134,12 @@ class BatchTestcaseEvaluator {
     should(this._config.tcInputFileUri).be.String();
     should(this._config.tcOutputFileUri).be.String();
 
-    should(this._config.timeLimit)
+    should(this._config.timeLimitMultiplier)
         .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
 
-    should(this._config.memoryLimit)
+    should(this._config.memoryLimitMultiplier)
         .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
@@ -142,6 +163,11 @@ class BatchTestcaseEvaluator {
     if (this._config.graderSourceUri) {
       should(this._config.graderSourceUri).be.String();
     }
+
+    this._config.timeLimit *= this._config.timeLimitMultiplier;
+    this._config.internalTimeLimit *= this._config.timeLimitMultiplier;
+    this._config.memoryLimit *= this._config.memoryLimitMultiplier;
+    this._config.internalMemoryLimit *= this._config.memoryLimitMultiplier;
 
     // Step 4. Check all URIs as a pre-check.
     should(this._validateUris()).be.true();
@@ -273,10 +299,11 @@ class BatchTestcaseEvaluator {
    * @param {string} entryPointUri Uri to the "main" file.
    * @param {?Array} helperFileUris Other files to copy to the working dir.
    * @param {string} language The language string (see class doc).
-   * @return {Object} The status returned by the sandbox.
+   * @return {Object} The status returned by the sandbox, with an additional
+                          'executableFilename' field.
    */
   _compileFile(entryPointUri, helperFileUris, language) {
-    let status;
+    let status = {};
     let args = [];
 
     if (helperFileUris) {
@@ -296,42 +323,54 @@ class BatchTestcaseEvaluator {
       return path.basename(helperFileUri);
     });
 
-    //FIXME Receive these limits as program options.
     this._sandbox
-        .timeLimit(10000)
-        .memoryLimit(100);
+        .timeLimit(this._config.internalTimeLimit * 1000)
+        .memoryLimit(this._config.internalMemoryLimit);
 
     switch (language) {
       case 'GCC_CXX':
+        status.executableFilename = relativeEntryPointPath + '.bin';
         args = _.concat(['-Wall', '-Wextra', '-std=c++14', '-O3', '-o',
-            relativeEntryPointPath + '.bin',
+            status.executableFilename,
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        status = this._sandbox.run('g++', args);
+        Object.assign(status, this._sandbox.run('g++', args));
         break;
 
       case 'GCC_C':
+        status.executableFilename = relativeEntryPointPath + '.bin';
         args = _.concat(['-Wall', '-Wextra', '-std=c11', '-O3', '-o',
             relativeEntryPointPath + '.bin',
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        status = this._sandbox.run('gcc', args);
+        Object.assign(status, status = this._sandbox.run('gcc', args));
         break;
 
       case 'JDK_JAVA':
         args = _.concat([relativeEntryPointPath], relativeHelperFilePaths);
 
-        status = this._sandbox.run('javac', args);
+        if (this._config.graderSourceUri) {
+          status.executableFilename = this._config.graderSourceUri;
+        } else {
+          status.executableFilename = this._config.submissionFileUri;
+        }
+
+        // Remove file extension: http://stackoverflow.com/a/4250408/747654
+        status.executableFilename.replace(/\.[^/.]+$/, '');
+
+        Object.assign(status, this._sandbox.run('javac', args));
         break;
 
       case 'CPYTHON_PYTHON3':
+        status.executableFilename = relativeEntryPointPath;
         break;
 
       case 'MONO_CSHARP':
-        args = _.concat(['-out:' + relativeEntryPointPath + '.exe',
+        status.executableFilename = relativeEntryPointPath + '.exe';
+        args = _.concat(['-out:' + status.executableFilename,
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        status = this._sandbox.run('mcs', args);
+        Object.assign(status, this._sandbox.run('mcs', args));
         break;
     }
 
@@ -339,22 +378,19 @@ class BatchTestcaseEvaluator {
   }
 
   /**
-   * Runs the submission executable file.
+   * Runs a generic executable file.
    *
    * @todo Actually deal with URIs. For now URIs and file paths are the same.
    *
    * @private
-   * @param {string} relativeExecutableFilePath The file to run, relative to the
-   *                     sandbox.
+   * @param {string} executableFilename The path of the file to be run, relative
+   *                     to the sandbox.
    * @param {string} language The language string (see class doc).
+   * @param {?Array} additionalArgs Additional arguments to pass.
    * @return {Object} The status returned by the sandbox.
    */
-  _runExecutable(relativeExecutableFilePath, language, additionalArgs) {
+  _runExecutable(executableFilename, language, additionalArgs) {
     let status;
-
-    this._sandbox
-      .timeLimit(this._config.timeLimit * 1000.0)
-      .memoryLimit(this._config.memoryLimit);
 
     if (additionalArgs) {
       additionalArgs = _.castArray(additionalArgs);
@@ -365,23 +401,22 @@ class BatchTestcaseEvaluator {
     switch (language) {
       case 'GCC_CXX':
       case 'GCC_C':
-        status = this._sandbox.runRelative(relativeExecutableFilePath,
-            _.concat([], additionalArgs));
+        status = this._sandbox.runRelative(executableFilename, additionalArgs);
         break;
 
       case 'JDK_JAVA':
         status = this._sandbox.run('java',
-            _.concat([relativeExecutableFilePath], additionalArgs));
+            _.concat([executableFilename], additionalArgs));
         break;
 
       case 'CPYTHON_PYTHON3':
         status = this._sandbox.run('python3',
-            _.concat([relativeExecutableFilePath], additionalArgs));
+            _.concat([executableFilename], additionalArgs));
         break;
 
       case 'MONO_CSHARP':
         status = this._sandbox.run('mono',
-            _.concat([relativeExecutableFilePath], additionalArgs));
+            _.concat([executableFilename], additionalArgs));
         break;
 
       default:
@@ -389,6 +424,36 @@ class BatchTestcaseEvaluator {
     }
 
     return status;
+  }
+
+  /**
+   * Runs a *user* executable file.
+   *
+   * @see _runExecutable
+   *
+   * @private
+   */
+  _runUserExecutable(executableFilename, language, additionalArgs) {
+    this._sandbox
+        .timeLimit(this._config.timeLimit * 1000)
+        .memoryLimit(this._config.memoryLimit);
+
+    return this._runExecutable(executableFilename, language, additionalArgs);
+  }
+
+  /**
+   * Runs an *internal* executable file.
+   *
+   * @see _runExecutable
+   *
+   * @private
+   */
+  _runInternalExecutable(executableFilename, language, additionalArgs) {
+    this._sandbox
+        .timeLimit(this._config.internalTimeLimit * 1000)
+        .memoryLimit(this._config.internalMemoryLimit);
+
+    return this._runExecutable(executableFilename, language, additionalArgs);
   }
 
   /**
@@ -414,36 +479,7 @@ class BatchTestcaseEvaluator {
         .stdin('input.txt')
         .stdout('output.txt');
 
-    let executablePath;
-    switch (this._config.submissionLanguage) {
-      case 'GCC_CXX':
-      case 'GCC_C':
-        executablePath = path.basename(this._config.submissionFileUri + '.bin');
-        break;
-
-      case 'JDK_JAVA':
-        if (this._config.graderSourceUri) {
-          executablePath = path.basename(this._config.graderSourceUri
-              .substr(0, this._config.graderSourceUri.length - 5));
-        } else {
-          executablePath = path.basename(this._config.submissionFileUri
-              .substr(0, this._config.submissionFileUri.length - 5));
-        }
-        break;
-
-      case 'CPYTHON_PYTHON3':
-        if (this._config.graderSourceUri) {
-          executablePath = path.basename(this._config.graderSourceUri);
-        } else {
-          executablePath = path.basename(this._config.submissionFileUri);
-        }
-        break;
-
-      case 'MONO_CSHARP':
-        executablePath = path.basename(this._config.submissionFileUri + '.exe');
-        break;
-    }
-    status = this._runExecutable(executablePath,
+    status = this._runUserExecutable(status.executableFilename,
         this._config.submissionLanguage);
 
     if (_.isNull(status.status) || !_.isNil(status.error)) {
@@ -466,14 +502,13 @@ class BatchTestcaseEvaluator {
     }
 
     if (this._config.checkerSourceUri) {
-      this._compileFile(this._config.checkerSourceUri, null,
+      status = this._compileFile(this._config.checkerSourceUri, null,
           this._config.checkerLanguage);
 
       // Restore the original input file (the user might have tampered with it)
       this._sandbox.add(this._config.tcInputFileUri, 'input.txt');
 
-      status = this._runExecutable(
-          path.basename(this._config.checkerSourceUri + '.bin'),
+      status = this._runInternalExecutable(status.executableFilename,
           this._config.checkerLanguage,
           ['output.txt', 'correct.txt', 'input.txt']);
     } else {

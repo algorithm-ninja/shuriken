@@ -6,6 +6,7 @@ const kue = require('kue');
 const mustache = require('mustache');
 const should = require('should');
 const util = require('util');
+const argv = require('minimist')(process.argv.slice(2));
 
 const queue = kue.createQueue();
 
@@ -58,17 +59,21 @@ const queue = kue.createQueue();
  * |                         | the second one by the testcase      |           |
  * |                         | index.                              |           |
  * +-------------------------+-------------------------------------+-----------+
- * | timeLimit               | A real number indicating how many   |     Y     |
- * |                         | seconds the submissionFile may be   |           |
- * |                         | executed for.                       |           |
- * +-------------------------+-------------------------------------+-----------+
- * | memoryLimit             | A real number indicating how many   |     Y     |
- * |                         | MiB are available for the execution |           |
- * |                         | of submissionFile.                  |           |
- * +-------------------------+-------------------------------------+-----------+
  * | evaluationStructure     | A list of subtask objects. The      |     Y     |
  * |                         | i-th of these objects represents    |           |
  * |                         | the i-th subtask.                   |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | timeLimit               | Forwarded field, see:               |     Y     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | memoryLimit             | Forwarded field, see:               |     Y     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalTimeLimit       | Forwarded field, see:               |     N     |
+ * |                         |   BatchTestcaseEvaluator            |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalMemoryLimit     | Forwarded field, see:               |     N     |
+ * |                         |   BatchTestcaseEvaluator            |           |
  * +-------------------------+-------------------------------------+-----------+
  * | submissionFileUri       | Forwarded field, see:               |     Y     |
  * |                         |   BatchTestcaseEvaluator            |           |
@@ -167,12 +172,14 @@ class BatchEvaluator {
         'timeLimit', 'memoryLimit']);
 
     // Step 2. Set all non mandatory fields to the default values.
-    this._config.checkerSourceUri =
-        _.get(this._config, 'checkerSourceUri', null);
     this._config.intraSubtaskAggregation =
         _.get(this._config, 'intraSubtaskAggregation', 'sum');
     this._config.interSubtaskAggregation =
         _.get(this._config, 'interSubtaskAggregation', 'sum');
+    this._config.internalTimeLimit =
+        _.get(argv, 'internal-time-limit', 10);
+    this._config.internalMemoryLimit =
+        _.get(argv, 'internal-memory-limit', 256);
 
     // Step 3. For each field, check values are feasible.
     should(this._config.tcInputFileUriSchema).be.String();
@@ -186,6 +193,16 @@ class BatchEvaluator {
         .and.be.above(0);
 
     should(this._config.memoryLimit)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
+    should(this._config.internalTimeLimit)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
+    should(this._config.internalMemoryLimit)
         .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
@@ -574,6 +591,8 @@ class BatchEvaluator {
       let conf = {
         timeLimit: this._config.timeLimit,
         memoryLimit: this._config.memoryLimit,
+        internalTimeLimit: this._config.internalTimeLimit,
+        internalMemoryLimit: this._config.internalMemoryLimit,
         submissionFileUri: this._config.submissionFileUri,
         submissionLanguage: this._config.submissionLanguage
       };
