@@ -100,10 +100,8 @@ class BatchTestcaseEvaluator {
     this._config.submissionLanguage = _.get(this._config, 'submissionLanguage',
         this._guessLanguageFromFileExtension(this._config.submissionFileUri));
 
-    this._config.checkerLanguage = _.get(this._config, 'checkerLanguage', null);
-
     if (_.isNull(this._config.checkerSourceUri)) {
-      _.isNull(this._config.checkerLanguage).should.be.true();
+      this._config.checkerLanguage = null;
     } else {
       this._config.checkerLanguage = _.get(this._config,
           'checkerLanguage',
@@ -351,29 +349,39 @@ class BatchTestcaseEvaluator {
    * @param {string} language The language string (see class doc).
    * @return {Object} The status returned by the sandbox.
    */
-  _runExecutable(relativeExecutableFilePath, language) {
+  _runExecutable(relativeExecutableFilePath, language, additionalArgs) {
     let status;
 
     this._sandbox
       .timeLimit(this._config.timeLimit * 1000.0)
       .memoryLimit(this._config.memoryLimit);
 
+    if (additionalArgs) {
+      additionalArgs = _.castArray(additionalArgs);
+    } else {
+      additionalArgs = [];
+    }
+
     switch (language) {
       case 'GCC_CXX':
       case 'GCC_C':
-        status = this._sandbox.runRelative(relativeExecutableFilePath, []);
+        status = this._sandbox.runRelative(relativeExecutableFilePath,
+            _.concat([], additionalArgs));
         break;
 
       case 'JDK_JAVA':
-        status = this._sandbox.run('java', [relativeExecutableFilePath]);
+        status = this._sandbox.run('java',
+            _.concat([relativeExecutableFilePath], additionalArgs));
         break;
 
       case 'CPYTHON_PYTHON3':
-        status = this._sandbox.run('python3', [relativeExecutableFilePath]);
+        status = this._sandbox.run('python3',
+            _.concat([relativeExecutableFilePath], additionalArgs));
         break;
 
       case 'MONO_CSHARP':
-        status = this._sandbox.run('mono', [relativeExecutableFilePath]);
+        status = this._sandbox.run('mono',
+            _.concat([relativeExecutableFilePath], additionalArgs));
         break;
 
       default:
@@ -439,7 +447,7 @@ class BatchTestcaseEvaluator {
         this._config.submissionLanguage);
 
     if (_.isNull(status.status) || !_.isNil(status.error)) {
-      if (status.error.code == 'ETIMEDOUT') {
+      if (status.error.code === 'ETIMEDOUT') {
         return this._publishEvaluation(0, 'Execution timed out');
       } else {
         return this._fail('Exception while executing solution, code ' +
@@ -458,14 +466,18 @@ class BatchTestcaseEvaluator {
     }
 
     if (this._config.checkerSourceUri) {
-      return this._fail('Checker correction not implemented!',
-        'Checker correction not implemented!');
-      //this._compileFile(this._config.checkerSourceUri, null,
-      //    this._config.checkerLanguage);
-      //status = this._evaluateSubmissionFile(this._config.submissionFileUri,
-      //    null, this._config.checkerLanguage);
+      this._compileFile(this._config.checkerSourceUri, null,
+          this._config.checkerLanguage);
+
+      // Restore the original input file (the user might have tampered with it)
+      this._sandbox.add(this._config.tcInputFileUri, 'input.txt');
+
+      status = this._runExecutable(
+          path.basename(this._config.checkerSourceUri + '.bin'),
+          this._config.checkerLanguage,
+          ['output.txt', 'correct.txt', 'input.txt']);
     } else {
-      //FIXME REceive these as program options.
+      //FIXME Receive these as program options.
       this._sandbox
           .timeLimit(10000)
           .memoryLimit(100);
