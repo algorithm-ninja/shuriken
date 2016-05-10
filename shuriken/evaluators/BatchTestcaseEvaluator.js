@@ -1,6 +1,6 @@
 'use strict';
 
-const Sandbox = require('../sandboxes/dummy');
+const Sandbox = require('cotton');
 
 const _ = require('lodash');
 const domain = require('domain');
@@ -496,7 +496,7 @@ class BatchTestcaseEvaluator {
       return this._publishEvaluation(0.0,
           'Execution failed with exit code ' + status.status);
     }
-    if (!_.isNull(status.signal)) {
+    if (!_.isNull(status.signal) && status.signal !== 0) {
       return this._publishEvaluation(0.0,
           'Execution killed with signal ' + status.signal);
     }
