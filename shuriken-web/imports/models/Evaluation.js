@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 const sanitizeHtml = require('sanitize-html');
-const should = require('should');
+const should = require('should/as-function');
 
 should.Assertion.add('ObjectId', function() {
   this.params = { operator: 'to be ObjectId' };

@@ -4,7 +4,7 @@
 const WebSocket = require('ws');
 const _ = require('lodash');
 const DDP = require('ddp.js').default;
-const should = require('should');
+const should = require('should/as-function');
 
 class DynamicSubscription {
   constructor(func, sub, unsub, isReady) {
@@ -75,7 +75,7 @@ class DataStore {
     if (!_.has(this._data, collection)) {
       this._data[collection] = {};
     }
-    should(this._data[collection]).should.not.have.property(objectId);
+    should(this._data[collection]).not.have.property(objectId);
     should(fields).not.have.property('_id');
     fields = _.mapValues(fields, (value) => {
       if (!_.has(value, '$type') || value['$type'] !== 'oid') {

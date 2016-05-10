@@ -8,7 +8,7 @@ import {getRouteContest, isValidContestRoute}
     from '../lib/routeContestUtils.js';
 // Requires.
 const _ = require('lodash');
-const should = require('should');
+const should = require('should/as-function');
 // UI fragments
 import './contestPageLayout.html';
 import './contestSidebar.js';

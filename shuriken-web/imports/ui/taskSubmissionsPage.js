@@ -10,7 +10,7 @@ import {getRouteTask, getRouteTaskRevision, isValidTaskRoute}
 // Model.
 import {Submission} from '../models/Submission.js';
 // Requires.
-const should = require('should');
+const should = require('should/as-function');
 // UI fragments.
 import './taskSubmissionsPage.html';
 import './submissionStatus.js';

@@ -4,7 +4,7 @@ const _ = require('lodash');
 const domain = require('domain');
 const kue = require('kue');
 const mustache = require('mustache');
-const should = require('should');
+const should = require('should/as-function');
 const util = require('util');
 const argv = require('minimist')(process.argv.slice(2));
 

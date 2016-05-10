@@ -6,7 +6,7 @@ import {getRouteContest, isValidContestRoute}
 import {getRouteTask, getRouteTaskRevision, isValidTaskRoute}
     from '../lib/routeTaskUtils.js';
 // Requires.
-const should = require('should');
+const should = require('should/as-function');
 // UI fragments.
 import './taskStatementPage.html';
 import './newSubmissionForm.js';
