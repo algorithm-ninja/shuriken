@@ -9,8 +9,6 @@ const path = require('path');
 const should = require('should/as-function');
 const argv = require('minimist')(process.argv.slice(2));
 
-const queue = kue.createQueue();
-
 /**
  * BatchTestcaseEvaluator
  * ======================
@@ -542,6 +540,8 @@ module.exports = BatchTestcaseEvaluator;
 
 // If this is being called from a shell, listen to the queue.
 if (!module.parent) {
+  const queue = kue.createQueue();
+
   queue.process('subjob', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
