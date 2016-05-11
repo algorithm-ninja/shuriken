@@ -10,7 +10,7 @@ import QueueMock from './queueMock';
 
 test('BatchEvaluator correctly creates each subjob, which is correctly ' +
       'evaluated by BatchTestcaseEvaluator', t => {
-  function doTest(expectedScores) {
+  function doTest(job, expectedScores) {
     const queue = new QueueMock();
     new BatchEvaluator(queue, job);
 
@@ -21,9 +21,7 @@ test('BatchEvaluator correctly creates each subjob, which is correctly ' +
       let promise = new BatchTestcaseEvaluator(job).getPromise();
 
       promise.then(function(info) {
-        if (info.score !== expectedScores[i]) {
-          t.fail(`The score is not ${expectedScores[i]}, it's: ${info.score}`);
-        }
+        t.is(info.score, expectedScores[i], 'Unexpected score');
       }, function(error) {
         if (_.isNull(error)) {
           t.fail('The evaluation failed unexpectedly');
@@ -57,19 +55,20 @@ test('BatchEvaluator correctly creates each subjob, which is correctly ' +
   let job = {progress: function(){}};
   job.data = _.clone(task1);
   delete job.data.checkerSourceUri;
-  allPromises = allPromises.concat(doTest([1, 1, 1, 1, 1, 1, 1, 1, 1]));
+  allPromises = allPromises.concat(doTest(job, [1, 1, 1, 1, 1, 1, 1, 1, 1]));
 
   job.data = _.clone(task1);
   delete job.data.checkerSourceUri;
-  job.data.submissionFileUri.replace('solution-ok', 'solution-wa');
-  allPromises = allPromises.concat(doTest([1, 1, 1, 1, 1, 1, 0, 1, 1]));
+  job.data.submissionFileUri = job.data.submissionFileUri.replace('solution-ok',
+      'solution-wa');
+  allPromises = allPromises.concat(doTest(job, [1, 1, 1, 1, 1, 1, 0, 1, 1]));
 
   job.data = _.clone(task1);
-  allPromises = allPromises.concat(doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]));
+  allPromises = allPromises.concat(doTest(job, [0, 0, 0, 1, 1, 1, 0, 1, 1]));
 
   job.data = _.clone(task1);
   job.data.checkerSourceUri.replace('checker-mod2.cpp', 'checker-mod2.py');
-  allPromises = allPromises.concat(doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]));
+  allPromises = allPromises.concat(doTest(job, [0, 0, 0, 1, 1, 1, 0, 1, 1]));
 
   return Promise.all(allPromises);
 });
