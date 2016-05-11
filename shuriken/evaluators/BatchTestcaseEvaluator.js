@@ -172,9 +172,6 @@ class BatchTestcaseEvaluator {
 
     // Step 5. Create the sandbox object.
     this._sandbox = new Sandbox();
-
-    console.log('Evaluating inside ' + this._sandbox._tempdir);
-    console.log(this._config);
   }
 
   /**
@@ -480,7 +477,6 @@ class BatchTestcaseEvaluator {
     status = this._runUserExecutable(status.executableFilename,
         this._config.submissionLanguage);
 
-    console.log(status);
     if (_.isNull(status.status) || !_.isNil(status.error)) {
       if (status.error.code === 'ETIMEDOUT') {
         return this._publishEvaluation(0, 'Execution timed out');
