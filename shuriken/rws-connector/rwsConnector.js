@@ -2,6 +2,7 @@
 
 const _ = require('lodash');
 const http = require('http');
+const Queue = require('queue');
 const should = require('should/as-function');
 const url = require('url');
 const ContestDataSubscriber = require('./contestDataSubscriber.js');
@@ -22,11 +23,22 @@ class RwsConnector {
         self._throttledOnDataChange();
       }
     });
+    this._requestQueue = new Queue();
+    this._requestQueue.concurrency = 1;
 
     this._lastScoreboard = {};
     this._sendContest();
   }
 
+  /**
+   * Computes the scoreboard for the given constest. A scoreboard is an Object
+   * with the following mapping:
+   *
+   * username -> taskCodename -> score.
+   *
+   * @todo Make scoreboard an instance of class on its own.
+   * @return {Object}
+   */
   _computeScoreboard() {
     const ready = this._contestDataSubscriber.ready();
     const dataStore = this._contestDataSubscriber.dataStore();
@@ -108,7 +120,7 @@ class RwsConnector {
       });
     });
 
-    console.log('[*****] Scoreboard computed!');
+    console.log('[=====] Scoreboard computed!');
     return scoreboard;
   }
 
@@ -133,11 +145,13 @@ class RwsConnector {
     return 'usern4me:passw0rd';
   }
 
-  _sendContest() {
+  _forwardToRws(path, data, finish) {
+    should(_.endsWith(path, '/')).be.true();
+
     const options = {
       host: this._rwsHost(),
       port: this._rwsPort(),
-      path: '/contests/',
+      path: path,
       method: 'PUT',
       auth: this._rwsAuth(),
       headers: {'content-type': 'application/json'},
@@ -145,57 +159,52 @@ class RwsConnector {
 
     const req = http.request(options, function(res) {
       if (res.statusCode >= 400) {
-        console.log('STATUS: ' + res.statusCode);
-        console.log('HEADERS: ' + JSON.stringify(res.headers));
+        console.warn(`[#####] Request to RWS failed (path: ${path}, ` +
+            `code: ${res.statusCode})`);
+        console.warn(`[#####] >> Data: ${JSON.stringify(data, null, 2)}`);
+        console.log(`[#####] >> Request header: ${JSON.stringify(res.headers)}`);
         res.setEncoding('utf8');
         res.on('data', function (chunk) {
-          console.log('BODY: ' + chunk);
+          console.log(`[#####] >> Body ${chunk}`);
         });
+
       } else {
-        console.log(`[*****] Succesfully sent to rws.`);
+        console.log(`[=====] Succesful request to RWS (path: ${path}, ` +
+            `code: ${res.statusCode})`);
       }
+      finish();
     });
 
     req.on('error', function(e) {
-      console.log('problem with request: ' + e.message);
+      console.error(`[!!!!!] Error while forwarding to RWS (path: ${path}): ` +
+          `${e.message}`);
+      finish();
     });
 
+    req.end(JSON.stringify(data));
+  }
+
+  _enqueueRwsRequest(path, data) {
+    const self = this;
+
+    this._requestQueue.push(
+      function(finish) {
+        self._forwardToRws(path, data, finish);
+      });
+  }
+
+  _sendContest() {
     const contestData = _.zipObject([this._contestCodename], [{
       name: this._contestCodename,
       begin: 1000000000,
       end: 2000000000,
       'score_precision': 2,
     }]);
-    req.end(JSON.stringify(contestData));
+
+    this._enqueueRwsRequest('/contests/', contestData);
   }
 
   _sendUserList(users) {
-    const options = {
-      host: this._rwsHost(),
-      port: this._rwsPort(),
-      path: '/users/',
-      method: 'PUT',
-      auth: this._rwsAuth(),
-      headers: {'content-type': 'application/json'},
-    };
-
-    const req = http.request(options, function(res) {
-      if (res.statusCode >= 400) {
-        console.log('STATUS: ' + res.statusCode);
-        console.log('HEADERS: ' + JSON.stringify(res.headers));
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-          console.log('BODY: ' + chunk);
-        });
-      } else {
-        console.log(`[*****] Succesfully sent to rws.`);
-      }
-    });
-
-    req.on('error', function(e) {
-      console.log('problem with request: ' + e.message);
-    });
-
     const digestedUsers = _.zipObject(users, _.map(users, (user) => {
       return {
         'f_name': user,
@@ -203,36 +212,11 @@ class RwsConnector {
         'team': null,
       };
     }));
-    req.end(JSON.stringify(digestedUsers));
+
+    this._enqueueRwsRequest('/users/', digestedUsers);
   }
 
   _sendTaskCodenames(taskCodenames) {
-    const options = {
-      host: this._rwsHost(),
-      port: this._rwsPort(),
-      path: '/tasks/',
-      method: 'PUT',
-      auth: this._rwsAuth(),
-      headers: {'content-type': 'application/json'},
-    };
-
-    const req = http.request(options, function(res) {
-      if (res.statusCode >= 400) {
-        console.log('STATUS: ' + res.statusCode);
-        console.log('HEADERS: ' + JSON.stringify(res.headers));
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-          console.log('BODY: ' + chunk);
-        });
-      } else {
-        console.log(`[*****] Succesfully sent to rws.`);
-      }
-    });
-
-    req.on('error', function(e) {
-      console.log('problem with request: ' + e.message);
-    });
-
     const digestedTasks = _.zipObject(
         taskCodenames, _.map(taskCodenames, (taskCodename, index) => {
       return {
@@ -240,13 +224,37 @@ class RwsConnector {
         'name': '',
         'contest': this._contestCodename,
         'order': index,
-        'max_score': 100.01,
+        'max_score': 100.001,
         'extra_headers': ['x'],
         'score_precision': 2,
         'score_mode': 'max',
       };
     }));
-    req.end(JSON.stringify(digestedTasks));
+
+    this._enqueueRwsRequest('/tasks/', digestedTasks);
+  }
+
+  _sendScore(username, taskCodename, score) {
+    // Step 1. Send in the submission.
+    const nowTimestamp = new Date().getTime();
+    const submissionId = `${nowTimestamp}${Math.random()}`;
+
+    const submissionData = _.zipObject([submissionId], [{
+      user: username,
+      task: taskCodename,
+      time: nowTimestamp,
+    }]);
+
+    const subchangeId = `${nowTimestamp}${Math.random()}`;
+    const subchangeData = _.zipObject([subchangeId], [{
+      submission: submissionId,
+      time: nowTimestamp,
+      token: true,
+      score: score + 0.001,
+    }]);
+
+    this._enqueueRwsRequest('/submissions/', submissionData);
+    this._enqueueRwsRequest('/subchanges/', subchangeData);
   }
 
   _onDataChange() {
@@ -267,25 +275,25 @@ class RwsConnector {
 
     const deltaAddUsers = _.difference(users, lastUsers);
     if (_.size(deltaAddUsers)) {
-      console.log(`[*****] ${_.size(deltaAddUsers)} new user added: ` +
+      console.log(`[=====] ${_.size(deltaAddUsers)} new user added: ` +
           `${JSON.stringify(deltaAddUsers)}`);
     }
     const deltaDelUsers = _.difference(lastUsers, users);
     if (_.size(deltaDelUsers)) {
-      console.log(`[*****] ${_.size(deltaDelUsers)} new user added: ` +
+      console.log(`[=====] ${_.size(deltaDelUsers)} new user added: ` +
           `${JSON.stringify(deltaDelUsers)}`);
     }
 
     const deltaAddTaskCodenames = _.difference(
         taskCodenames, lastTaskCodenames);
     if (_.size(deltaAddTaskCodenames)) {
-      console.log(`[*****] ${_.size(deltaAddTaskCodenames)} new tasks added: ` +
+      console.log(`[=====] ${_.size(deltaAddTaskCodenames)} new tasks added: ` +
           `${JSON.stringify(deltaAddTaskCodenames)}`);
     }
     const deltaDelTaskCodenames = _.difference(
         lastTaskCodenames, taskCodenames);
     if (_.size(deltaDelTaskCodenames)) {
-      console.log(`[*****] ${_.size(deltaDelTaskCodenames)} new tasks added: ` +
+      console.log(`[=====] ${_.size(deltaDelTaskCodenames)} new tasks added: ` +
           `${JSON.stringify(deltaDelTaskCodenames)}`);
     }
 
@@ -295,6 +303,30 @@ class RwsConnector {
     if (_.size(deltaAddTaskCodenames) || _.size(deltaDelTaskCodenames)) {
       this._sendTaskCodenames(taskCodenames);
     }
+
+    _.each(scoreboard, (scores, username) => {
+      _.each(scores, (score, taskCodename) => {
+        if (!_.has(lastScoreboard, username)) {
+          this._sendScore(username, taskCodename, score);
+        } else {
+          const oldScores = _.get(lastScoreboard, username);
+          if (!_.has(oldScores, taskCodename)) {
+            this._sendScore(username, taskCodename, score);
+          } else if (_.get(oldScores, taskCodename) !== score) {
+            this._sendScore(username, taskCodename, score);
+          }
+        }
+      });
+    });
+
+    this._requestQueue.start(function(err) {
+      if (_.isNil(err)) {
+        err = 'none';
+      }
+      console.log(`[  Q  ] All done (err: ${err}).`);
+    });
+
+    this._lastScoreboard = scoreboard;
   }
 }
 

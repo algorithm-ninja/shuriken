@@ -19,10 +19,8 @@ module.exports = class DynamicSubscription {
       console.warn(`Ignoring multiple subscriptions to ${key}`);
     } else {
       if (!_.has(this._activeSubscriptions, key)) {
-        //console.info(`New subscription ${key}`);
         this._subscriptionBuffer[key] = this._sub(name, args);
       } else {
-        // console.info(`Ignoring already existing subscription ${key}`);
         this._subscriptionBuffer[key] = null;
       }
     }
@@ -31,7 +29,6 @@ module.exports = class DynamicSubscription {
   _flushSubscriptions() {
     _.each(this._activeSubscriptions, (sub, key) => {
       if (!_.has(this._subscriptionBuffer, key)) {
-        //console.info(`Removing subscription ${key}`);
         this._unsub(sub);
         _.unset(this._activeSubscriptions, key);
       }
