@@ -9,7 +9,7 @@ test('BatchTestcaseEvaluator checks job.data is Object', t => {
   };
 
   t.throws(() => {
-    new BatchTestcaseEvaluator(job, null);
+    new BatchTestcaseEvaluator(job);
   }, /to be an object/);
 });
 
@@ -23,7 +23,7 @@ test('BatchTestcaseEvaluator checks missing properties', t => {
   };
 
   t.throws(() => {
-    new BatchTestcaseEvaluator(job, null);
+    new BatchTestcaseEvaluator(job);
   }, /to have property tcInputFileUri/);
 });
 
@@ -40,6 +40,6 @@ test('BatchTestcaseEvaluator checks invalid properties', t => {
   };
 
   t.throws(() => {
-    new BatchTestcaseEvaluator(job, null);
+    new BatchTestcaseEvaluator(job);
   }, /to be equals one of Array/);
 });

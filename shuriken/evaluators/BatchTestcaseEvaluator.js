@@ -3,11 +3,11 @@
 const Sandbox = require('cotton');
 
 const _ = require('lodash');
-const domain = require('domain');
 const kue = require('kue');
 const path = require('path');
 const should = require('should/as-function');
 const argv = require('minimist')(process.argv.slice(2));
+
 
 /**
  * BatchTestcaseEvaluator
@@ -83,17 +83,17 @@ const argv = require('minimist')(process.argv.slice(2));
 
 class BatchTestcaseEvaluator {
   /**
-   * Receive a link to the Kue Job and the callback to inform the queue manager
-   * that the evaluation has finished.
+   * Receive a link to the Kue Job.
    *
    * @param {!Object} job The current Kue Job.
-   * @param {function} doneCallback Callback to inform the queue manager that
-   *                       the evaluation has finished.
    * @constructor
    */
-  constructor(job, doneCallback) {
+  constructor(job) {
     this._kueJob = job;
-    this._doneCallback = doneCallback;
+    this._promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
 
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
@@ -172,6 +172,9 @@ class BatchTestcaseEvaluator {
 
     // Step 5. Create the sandbox object.
     this._sandbox = new Sandbox();
+
+    // Step 6. Start evaluation.
+    this._run();
   }
 
   /**
@@ -188,7 +191,7 @@ class BatchTestcaseEvaluator {
         .and.be.within(0, 1);
     should(message).be.String();
 
-    this._doneCallback(null, {
+    this.resolve({
         'score': score,
         'message': message,
     });
@@ -204,7 +207,7 @@ class BatchTestcaseEvaluator {
   _fail(message, err) {
     should(message).be.String();
 
-    this._doneCallback(message, {});
+    this.reject(message);
     throw err;
   }
 
@@ -453,8 +456,10 @@ class BatchTestcaseEvaluator {
 
   /**
    * Main entry point. Evaluate the submission.
+   *
+   * @private
    */
-  run() {
+  _run() {
     // Compile contestant solution.
     let status = this._compileFile(this._config.submissionFileUri,
         this._config.graderSourceUri,
@@ -530,6 +535,15 @@ class BatchTestcaseEvaluator {
       return this._publishEvaluation(1.0, 'Correct answer');
     }
   }
+
+  /**
+   * Return a promise for the evaluation completion.
+   *
+   * @return {Promise}
+   */
+  getPromise() {
+    return this._promise;
+  }
 }
 
 module.exports = BatchTestcaseEvaluator;
@@ -539,14 +553,17 @@ if (!module.parent) {
   const queue = kue.createQueue();
 
   queue.process('subjob', function(job, done) {
-    let d = domain.create();
-    d.on('error', (err) => {
-      console.error(err);
-      done(err);
-    });
-    d.run(() => {
-      let evaluator = new BatchTestcaseEvaluator(job, done);
-      evaluator.run();
-    });
+    try{
+      const evaluator = new BatchTestcaseEvaluator(job);
+      evaluator.getPromise().then(function(result) {
+        done(null, result);
+      }, function(error) {
+        done(error);
+      });
+    } catch (error) {
+      console.error('Unhandled exception');
+      console.error(error);
+      done(error);
+    }
   });
 }

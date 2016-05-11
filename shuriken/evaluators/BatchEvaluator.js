@@ -1,7 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const domain = require('domain');
 const kue = require('kue');
 const mustache = require('mustache');
 const should = require('should/as-function');
@@ -147,19 +146,19 @@ const argv = require('minimist')(process.argv.slice(2));
  */
 class BatchEvaluator {
   /**
-   * Receive a link to the Kue Job and the callback to inform the queue manager
-   * that the evaluation has finished.
+   * Receive a link to the Kue Job.
    *
    * @param {Queue} queue The Kue queue to use.
    * @param {!Object} job The current Kue Job.
-   * @param {function} doneCallback Callback to inform the queue manager that
-   *                       the evaluation has finished.
    * @constructor
    */
-  constructor(queue, job, doneCallback) {
+  constructor(queue, job) {
     this._queue = queue;
     this._kueJob = job;
-    this._doneCallback = doneCallback;
+    this._promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
 
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
@@ -233,6 +232,9 @@ class BatchEvaluator {
     }
 
     should(this._validateUris()).be.true();
+
+    // Step 4. Start evaluation.
+    this._run();
   }
 
   /**
@@ -278,24 +280,24 @@ class BatchEvaluator {
    * @private
    * @return {bool} True iff at least one testcase evaluation has failed.
    */
-   _someTestcaseFailed() {
-     for (let subtaskIndex = 1;
-         subtaskIndex <= this._config.evaluationStructure.length;
-         ++subtaskIndex) {
-       const nTestcasesForSubtask =
+  _someTestcaseFailed() {
+    for (let subtaskIndex = 1;
+        subtaskIndex <= this._config.evaluationStructure.length;
+        ++subtaskIndex) {
+      const nTestcasesForSubtask =
           this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
 
-       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
-            ++testcaseIndex) {
-         const testcaseState =
+      for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
+          ++testcaseIndex) {
+        const testcaseState =
             this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex].state;
-         if (testcaseState === 'failed') {
-           return true;
-         }
-       }
-     }
-     return false;
-   }
+        if (testcaseState === 'failed') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   /**
    * Returns the current evaluation status as an HTML string.
@@ -467,9 +469,9 @@ class BatchEvaluator {
     if (this._allTestcasesHaveFinished()) {
       if (this._someTestcaseFailed()) {
         //TODO: Return (more) meaningful error
-        this._doneCallback('some testcases failed', {});
+        this.reject('some testcases failed');
       } else {
-        this._doneCallback(null, this._computeScore());
+        this.resolve(this._computeScore());
       }
     }
   }
@@ -488,10 +490,7 @@ class BatchEvaluator {
                           preventUpdate) {
     should(progress)
         .be.Object()
-        .and.have.properties('state')
-        .and.have.properties('error')
-        .and.have.properties('score')
-        .and.have.properties('message');
+        .and.have.properties(['state', 'error', 'score', 'message']);
 
     this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex] = progress;
     if (!preventUpdate) {
@@ -578,8 +577,10 @@ class BatchEvaluator {
 
   /**
    * Main entry point. Evaluates the submission.
+   *
+   * @private
    */
-  run() {
+  _run() {
     this._initTestcaseStructure(this._config.evaluationStructure);
 
     for (let subtaskIndex = 1;
@@ -623,6 +624,15 @@ class BatchEvaluator {
       }
     }
   }
+
+  /**
+   * Return a promise for the evaluation completion.
+   *
+   * @return {Promise}
+   */
+  getPromise() {
+    return this._promise;
+  }
 }
 
 module.exports = BatchEvaluator;
@@ -632,14 +642,17 @@ if (!module.parent) {
   const queue = kue.createQueue();
 
   queue.process('evaluation', function(job, done) {
-    let d = domain.create();
-    d.on('error', (err) => {
-      console.error(err);
-      done(err, {});
-    });
-    d.run(() => {
-      let evaluator = new BatchEvaluator(queue, job, done);
-      evaluator.run();
-    });
+    try {
+      const evaluator = new BatchEvaluator(queue, job);
+      evaluator.getPromise().then(function(result) {
+        done(null, result);
+      }, function(error) {
+        done(error);
+      });
+    } catch (error) {
+      console.error('Unhandled exception');
+      console.error(error);
+      done(error);
+    }
   });
 }

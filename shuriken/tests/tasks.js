@@ -2,13 +2,13 @@
 
 const path = require('path');
 
-const task1dir = path.join('file://', __dirname, 'task1-a-plus-b');
+const task1dir = 'file://' + path.join(__dirname, 'task1-a-plus-b');
 
 const task1 = {
-  submissionFileUri: path.join(task1dir, 'solution-ok.cpp'),
-  tcInputFileUriSchema: path.join(task1dir, 'input.%d.%d.cpp'),
-  tcOutputFileUriSchema: path.join(task1dir, 'output.%d.%d.cpp'),
-  checkerSourceUri: path.join(task1dir, 'checker-rnd.cpp'),
+  submissionFileUri: task1dir + '/solution-ok.cpp',
+  tcInputFileUriSchema: task1dir + '/input%d.%d.txt',
+  tcOutputFileUriSchema: task1dir + '/output%d.%d.txt',
+  checkerSourceUri: task1dir + '/checker-mod2.cpp',
   intraSubtaskAggregation: 'sum',
   interSubtaskAggregation: 'sum',
   evaluationStructure: [
