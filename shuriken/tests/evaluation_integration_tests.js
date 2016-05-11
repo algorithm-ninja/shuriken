@@ -49,23 +49,27 @@ test('BatchEvaluator correctly creates each subjob, which is correctly ' +
       i += 1;
     }
 
-    Promise.all(promises).then(t.pass);
+    return promises;
   }
+
+  let allPromises = [];
 
   let job = {progress: function(){}};
   job.data = _.clone(task1);
   delete job.data.checkerSourceUri;
-  doTest([1, 1, 1, 1, 1, 1, 1, 1, 1]);
+  allPromises = allPromises.concat(doTest([1, 1, 1, 1, 1, 1, 1, 1, 1]));
 
-  // job.data = _.clone(task1);
-  // delete job.data.checkerSourceUri;
-  // job.data.submissionFileUri.replace('solution-ok', 'solution-wa');
-  // doTest([1, 1, 1, 1, 1, 1, 0, 1, 1]);
-  //
-  // job.data = _.clone(task1);
-  // doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]);
-  //
-  // job.data = _.clone(task1);
-  // job.data.checkerSourceUri.replace('checker-mod2.cpp', 'checker-mod2.py');
-  // doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]);
+  job.data = _.clone(task1);
+  delete job.data.checkerSourceUri;
+  job.data.submissionFileUri.replace('solution-ok', 'solution-wa');
+  allPromises = allPromises.concat(doTest([1, 1, 1, 1, 1, 1, 0, 1, 1]));
+
+  job.data = _.clone(task1);
+  allPromises = allPromises.concat(doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]));
+
+  job.data = _.clone(task1);
+  job.data.checkerSourceUri.replace('checker-mod2.cpp', 'checker-mod2.py');
+  allPromises = allPromises.concat(doTest([0, 0, 0, 1, 1, 1, 0, 1, 1]));
+
+  return Promise.all(allPromises);
 });

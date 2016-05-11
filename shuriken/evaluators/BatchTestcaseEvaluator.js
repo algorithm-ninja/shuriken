@@ -91,8 +91,8 @@ class BatchTestcaseEvaluator {
   constructor(job) {
     this._kueJob = job;
     this._promise = new Promise((resolve, reject) => {
-      this.resolve = resolve;
-      this.reject = reject;
+      this._resolve = resolve;
+      this._reject = reject;
     });
 
     // Parse the configuration for this job (found in job.data()).
@@ -191,7 +191,7 @@ class BatchTestcaseEvaluator {
         .and.be.within(0, 1);
     should(message).be.String();
 
-    this.resolve({
+    this._resolve({
         'score': score,
         'message': message,
     });
@@ -207,7 +207,7 @@ class BatchTestcaseEvaluator {
   _fail(message, err) {
     should(message).be.String();
 
-    this.reject(message);
+    this._reject(message);
     throw err;
   }
 

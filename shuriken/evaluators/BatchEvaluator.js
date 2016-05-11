@@ -156,8 +156,8 @@ class BatchEvaluator {
     this._queue = queue;
     this._kueJob = job;
     this._promise = new Promise((resolve, reject) => {
-      this.resolve = resolve;
-      this.reject = reject;
+      this._resolve = resolve;
+      this._reject = reject;
     });
 
     // Parse the configuration for this job (found in job.data()).
@@ -469,9 +469,9 @@ class BatchEvaluator {
     if (this._allTestcasesHaveFinished()) {
       if (this._someTestcaseFailed()) {
         //TODO: Return (more) meaningful error
-        this.reject('some testcases failed');
+        this._reject('some testcases failed');
       } else {
-        this.resolve(this._computeScore());
+        this._resolve(this._computeScore());
       }
     }
   }
