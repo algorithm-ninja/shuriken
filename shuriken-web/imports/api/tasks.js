@@ -15,7 +15,7 @@ if (Meteor.isServer) {
    *
    * @todo Check that the user is allowed to view the task.
    */
-  Meteor.publish('AllTasks', function() {
+  Meteor.publish('Tasks', function() {
     return Tasks.find({});
   });
 

@@ -1,349 +1,64 @@
 'use strict';
 
-// const http = require('http');
-const WebSocket = require('ws');
 const _ = require('lodash');
-const DDP = require('ddp.js').default;
+const http = require('http');
 const should = require('should');
+const url = require('url');
 
-class DynamicSubscription {
-  constructor(func, sub, unsub, isReady) {
-    this._func = func;
-    this._sub = sub;
-    this._unsub = unsub;
-    this._isReady = isReady;
-    this._activeSubscriptions = {};
-    this._subscriptionBuffer = {};
+const ContestDataSubscriber = require('./contestDataSubscriber.js');
 
-    this._firstTime = true;
-  }
-
-  subscribe(name, args) {
-    const key = _.join([name, JSON.stringify(args)], '__');
-    if (_.has(this._subscriptionBuffer, key)) {
-      console.warn(`Ignoring multiple subscriptions to ${key}`);
-    } else {
-      if (!_.has(this._activeSubscriptions, key)) {
-        //console.info(`New subscription ${key}`);
-        this._subscriptionBuffer[key] = this._sub(name, args);
-      } else {
-        // console.info(`Ignoring already existing subscription ${key}`);
-        this._subscriptionBuffer[key] = null;
-      }
-    }
-  }
-
-  _flushSubscriptions() {
-    _.each(this._activeSubscriptions, (sub, key) => {
-      if (!_.has(this._subscriptionBuffer, key)) {
-        //console.info(`Removing subscription ${key}`);
-        this._unsub(sub);
-        _.unset(this._activeSubscriptions, key);
-      }
-    });
-
-    _.each(this._subscriptionBuffer, (sub, key) => {
-      if (!_.has(this._activeSubscriptions, key)) {
-        should(sub).be.not.null();
-        this._activeSubscriptions[key] = sub;
-      }
-    });
-
-    this._subscriptionBuffer = {};
-    this._firstTime = false;
-  }
-
-  run(args) {
-    this._func.apply(this, arguments);
-    this._flushSubscriptions();
-  }
-
-  ready() {
-    return !this._firstTime && _.every(this._activeSubscriptions, (sub) => {
-      return this._isReady(sub);
-    });
-  }
-}
-
-class DataStore {
-  constructor() {
-    this._data = {};
-  }
-
-  add(collection, objectId, fields) {
-    console.log(`New object in ${collection}, id ${objectId}`);
-    if (!_.has(this._data, collection)) {
-      this._data[collection] = {};
-    }
-    should(this._data[collection]).should.not.have.property(objectId);
-    should(fields).not.have.property('_id');
-    fields = _.mapValues(fields, (value) => {
-      if (!_.has(value, '$type') || value['$type'] !== 'oid') {
-        return value;
-      } else {
-        return value['$value'];
-      }
-    });
-    fields._id = objectId;
-    this._data[collection][objectId] = fields;
-  }
-
-  remove(collection, objectId) {
-    console.log(`Deletion in ${collection}, id ${objectId}`);
-    should(this._data).have.property(collection);
-    should(this._data[collection]).have.property(objectId);
-    this._data[collection] = _.omit(this._data[collection], objectId);
-  }
-
-  change(collection, objectId, fields, cleared) {
-    console.log(`Change in ${collection}, id ${objectId}`);
-    should(this._data).have.property(collection);
-    should(this._data[collection]).have.property(objectId);
-
-    fields = _.mapValues(fields, (value) => {
-      if (!_.has(value, '$type') || value['$type'] !== 'oid') {
-        return value;
-      } else {
-        return value['$value'];
-      }
-    });
-    this._data[collection][objectId] = _.omit(
-      _.assign(this._data[collection][objectId], fields), cleared);
-  }
-
-  findOne(collection, key, value) {
-    if (!_.has(this._data, collection)) {
-      return undefined;
-    }
-
-    if (_.isNil(key)) {
-      return _.find(this._data[collection], true);
-    } else if (key === '_id') {
-      return _.get(this._data[collection], value, undefined);
-    } else {
-      return _.find(this._data[collection], (fields) => {
-        return (_.get(fields, key, undefined) == value);
-      });
-    }
-  }
-
-  findAll(collection, key, value) {
-    if (!_.has(this._data, collection)) {
-      return undefined;
-    }
-
-    if (_.isNil(key)) {
-      return _.map(this._data[collection], (obj) => {return obj;});
-    } else if (key === '_id') {
-      return _.get(this._data[collection], value, undefined);
-    } else {
-      return _.filter(this._data[collection], (fields) => {
-        return (_.get(fields, key, undefined) == value);
-      });
-    }
-  }
-}
-
-class rwsConnector {
+class RwsConnector {
   constructor(contestCodename, shurikenAddress, rwsAddress) {
+    let self = this;
+
     this._contestCodename = contestCodename;
     this._shurikenAddress = shurikenAddress;
     this._rwsAddress = rwsAddress;
-    this._store = new DataStore();
-    this._submissionStatus = {};
-    this._throttledUpdateScoreboard =
-        _.throttle(this._updateScoreboard, 250, {trailing: true});
+    this._throttledOnDataChange =
+        _.throttle(this._onDataChange, 250, {trailing: true});
 
-    //IDEA Check if rws is reachable.
-    const ddpOptions = {
-        endpoint: this._shurikenAddress,
-        SocketConstructor: WebSocket,
-    };
-    this._ddp = new DDP(ddpOptions);
-
-    this._ddp.on('ready', message => {
-      const subs = message.subs;
-      _.each(subs, (subId) => {
-        should(this._submissionStatus).have.property(subId);
-        this._submissionStatus[subId] = true;
-      })
-    })
-
-    this._ddp.on('added', message => {
-      const collection = message.collection;
-      const objectId = message.id;
-      const fields = message.fields;
-
-      this._store.add(collection, objectId, fields);
-      this._updateSubscriptions(collection);
-      this._throttledUpdateScoreboard();
-    });
-
-    this._ddp.on('changed', message => {
-      const collection = message.collection;
-      const objectId = message.id;
-      const fields = message.fields;
-      const cleared = message.cleared;
-
-      this._store.change(collection, objectId, fields, cleared);
-      this._updateSubscriptions(collection);
-      this._throttledUpdateScoreboard();
-    });
-
-    this._ddp.on('removed', message => {
-      const collection = message.collection;
-      const objectId = message.id;
-
-      this._store.remove(collection, objectId);
-      this._updateSubscriptions(collection);
-      this._throttledUpdateScoreboard();
-    });
-
-    this._ddp.on('connected', () => {
-      console.log('DDP connected.');
-      this._updateSubscriptions();
-    });
-
-    this._ddp.on('disconnected', () => {
-      console.log('DDP disconnected.');
-    });
-
-    const subscribe = (name, params) => {
-      const paramsArray = _.castArray(params);
-      const subId = this._ddp.sub(name, paramsArray);
-      console.log(`New subscription to ${name} (ID: ${subId})`);
-      should(this._submissionStatus).not.have.property(subId);
-      // Set as not ready
-      this._submissionStatus[subId] = false;
-      return subId;
-    };
-
-    const unsubscribe = (subId) => {
-      console.log(`Delete subscription ID ${subId}`);
-      should(this._submissionStatus).have.property(subId);
-      this._submissionStatus = _.omit(this._submissionStatus, subId);
-      this._ddp.unsub(subId);
-    };
-
-    const isReady = (subId) => {
-      return this._submissionStatus[subId];
-    }
-
-    this._usersSub = new DynamicSubscription(function() {
-      this.subscribe('Users', []);
-    }, subscribe, unsubscribe);
-
-    this._contestSub = new DynamicSubscription(function(codename) {
-      this.subscribe('ContestByCodename', codename);
-    }, subscribe, unsubscribe);
-
-    this._contestTasksSub = new DynamicSubscription(function(contestId) {
-      contestId = {'$type': 'oid', '$value': contestId};
-      this.subscribe('ContestTasksByContestId', contestId);
-    }, subscribe, unsubscribe);
-
-    this._taskRevisionsSub = new DynamicSubscription(function(taskRevionsIds) {
-      _.each(taskRevionsIds, (taskRevisionId) => {
-        taskRevisionId = {'$type': 'oid', '$value': taskRevisionId};
-        this.subscribe('TaskRevisionById', taskRevisionId);
-      });
-    }, subscribe, unsubscribe);
-
-    this._tasksSub = new DynamicSubscription(function(taskIds) {
-      _.each(taskIds, (taskId) => {
-        taskId = {'$type': 'oid', '$value': taskId};
-        this.subscribe('TaskById', taskId);
-      });
-    }, subscribe, unsubscribe);
-
-    this._submissionsSub = new DynamicSubscription(function(contestId) {
-      contestId = {'$type': 'oid', '$value': contestId};
-      this.subscribe('SubmissionsForContestId', contestId);
-    }, subscribe, unsubscribe);
-
-    this._evaluationsSub = new DynamicSubscription(function(taskRevisionIds) {
-      _.each(taskRevisionIds, (taskRevisionId) => {
-        taskRevisionId = {'$type': 'oid', '$value': taskRevisionId};
-        this.subscribe('LiveEvaluationsForTaskRevisionId', taskRevisionId);
-      });
-    }, subscribe, unsubscribe);
-  }
-
-  _updateSubscriptions() {
-    this._usersSub.run();
-    this._contestSub.run(this._contestCodename);
-
-    const contest = this._store
-        .findOne('contests', 'codename', this._contestCodename);
-    if (_.isNil(contest)) {
-      return;
-    }
-
-    const contestId = contest._id;
-    this._contestTasksSub.run(contestId);
-    this._submissionsSub.run(contestId);
-
-    const contestTasks = this._store
-        .findAll('contestTasks', 'contestId', contestId);
-
-    const taskRevisionIds = _.map(contestTasks, (contestTask) => {
-      return contestTask.taskRevisionId;
-    });
-    this._taskRevisionsSub.run(taskRevisionIds);
-    this._evaluationsSub.run(taskRevisionIds);
-
-    const taskIds = _.map(taskRevisionIds, (taskRevisionId) => {
-      const taskRevision = this._store
-          .findOne('taskRevisions', '_id', taskRevisionId);
-      if (_.isNil(taskRevision)) {
-        return undefined;
-      } else {
-        return taskRevision.taskId;
+    this._contestDataSubscriber = new ContestDataSubscriber(
+        contestCodename, shurikenAddress, function() {
+      if (this.ready()) {
+        self._throttledOnDataChange();
       }
     });
-    this._tasksSub.run(_.filter(taskIds));
+
+    this._lastScoreboard = {};
+    this._sendContest();
   }
 
-  _isDataReady() {
-    return this._usersSub.ready() &&
-           this._contestSub.ready() &&
-           this._contestTasksSub.ready() &&
-           this._taskRevisionsSub.ready() &&
-           this._tasksSub.ready() &&
-           this._submissionsSub.ready() &&
-           this._evaluationsSub.ready();
-  }
+  _computeScoreboard() {
+    const ready = this._contestDataSubscriber.ready();
+    const dataStore = this._contestDataSubscriber.dataStore();
 
-  _updateScoreboard() {
-    if (!_.isDataReady) {
-      console.warn('Could not update scoreboard: data is not ready');
-    }
+    should(ready).be.true();
 
     // Map user -> taskCodename -> score
-    const users = this._store.findAll('users');
-    const contest = this._store.findOne(
+    const users = dataStore.findAll('users');
+    const contest = dataStore.findOne(
         'contests', 'codename', this._contestCodename);
     if (_.isNil(contest)) {
-      console.warn('Could not update scoreboard: contest is not ready');
+      console.warn('[ ### ] Could not update scoreboard: contest is not ready');
       return;
     }
     const contestId = contest._id;
-    const contestTasks = this._store.findAll(
+    const contestTasks = dataStore.findAll(
         'contestTasks', 'contestId', contestId);
     const taskRevisionIds = _.map(contestTasks, (contestTask) => {
       return contestTask.taskRevisionId;
     });
 
-    const taskRevisionIdToTaskCodename = {}
+    const taskRevisionIdToTaskCodename = {};
     _.each(taskRevisionIds, (taskRevisionId) => {
-      const taskRevision = this._store.findOne(
+      const taskRevision = dataStore.findOne(
           'taskRevisions', '_id', taskRevisionId);
       if (!_.isNil(taskRevision)) {
         const taskId = taskRevision.taskId;
-        const task = this._store.findOne('tasks', '_id', taskId);
+        const task = dataStore.findOne('tasks', '_id', taskId);
 
         if (!_.isNil(task)) {
-          taskRevisionIdToTaskCodename[taskRevisionId] = task._id;
+          taskRevisionIdToTaskCodename[taskRevisionId] = task.codename;
         } else {
           taskRevisionIdToTaskCodename[taskRevisionId] = undefined;
         }
@@ -354,7 +69,7 @@ class rwsConnector {
 
 
     if (!_.every(taskRevisionIdToTaskCodename)) {
-      console.warn('Could not update scoreboard: not all task codenames are ' +
+      console.warn('[ ### ] Could not update scoreboard: not all task codenames are ' +
           'available');
       return;
     }
@@ -368,35 +83,219 @@ class rwsConnector {
     });
 
     _.each(taskRevisionIdToTaskCodename, (taskCodename, taskRevisionId) => {
-      const evaluations = this._store.findAll(
+      const evaluations = dataStore.findAll(
           'evaluations', 'taskRevisionId', taskRevisionId);
-      console.log(JSON.stringify(evaluations, null, 2));
       _.each(evaluations, (evaluation) => {
         const submissionId = evaluation.submissionId;
         const isLive = evaluation.isLive;
         const kueState = evaluation.kueState;
         if (isLive && kueState === 'complete') {
           const score = evaluation.kueResult.score;
-          const submission = this._store.findOne(
+          const submission = dataStore.findOne(
               'submissions', '_id', submissionId);
           if (!_.isNil(submission)) {
             const userId = submission.userId;
-            const user = this._store.findOne('users', '_id', userId);
+            const user = dataStore.findOne('users', '_id', userId);
             if (!_.isNil(user)) {
               scoreboard[user.username][taskCodename] = Math.max(
                   scoreboard[user.username][taskCodename], score);
             } else {
-              console.warn(`Warning: user Id ${userId} not loaded`);
+              console.warn(`[ ### ] User Id ${userId} not loaded`);
             }
           } else {
-            console.warn(`Warning: submission Id ${submissionId} not loaded`);
+            console.warn(`[ ### ] Submission Id ${submissionId} not loaded`);
           }
         }
-      })
+      });
     });
 
-    console.log('Scoreboard updated!');
-    console.log(JSON.stringify(scoreboard));
+    console.log('[*****] Scoreboard computed!');
+    return scoreboard;
+  }
+
+  /**
+   * @todo not here!
+   */
+  _rwsHost() {
+    return url.parse(this._rwsAddress).hostname;
+  }
+
+  /**
+   * @todo not here!
+   */
+  _rwsPort() {
+    return url.parse(this._rwsAddress).port;
+  }
+
+  /**
+   * @todo not here!
+   */
+  _rwsAuth() {
+    return 'usern4me:passw0rd';
+  }
+
+  _sendContest() {
+    const options = {
+      host: this._rwsHost(),
+      port: this._rwsPort(),
+      path: '/contests/',
+      method: 'PUT',
+      auth: this._rwsAuth(),
+      headers: {'content-type': 'application/json'},
+    };
+
+    const req = http.request(options, function(res) {
+      if (res.statusCode >= 400) {
+        console.log('STATUS: ' + res.statusCode);
+        console.log('HEADERS: ' + JSON.stringify(res.headers));
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+          console.log('BODY: ' + chunk);
+        });
+      } else {
+        console.log(`[*****] Succesfully sent to rws.`);
+      }
+    });
+
+    req.on('error', function(e) {
+      console.log('problem with request: ' + e.message);
+    });
+
+    const contestData = _.zipObject([this._contestCodename], [{
+      name: this._contestCodename,
+      begin: 1000000000,
+      end: 2000000000,
+      'score_precision': 2,
+    }]);
+    req.end(JSON.stringify(contestData));
+  }
+
+  _sendUserList(users) {
+    const options = {
+      host: this._rwsHost(),
+      port: this._rwsPort(),
+      path: '/users/',
+      method: 'PUT',
+      auth: this._rwsAuth(),
+      headers: {'content-type': 'application/json'},
+    };
+
+    const req = http.request(options, function(res) {
+      if (res.statusCode >= 400) {
+        console.log('STATUS: ' + res.statusCode);
+        console.log('HEADERS: ' + JSON.stringify(res.headers));
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+          console.log('BODY: ' + chunk);
+        });
+      } else {
+        console.log(`[*****] Succesfully sent to rws.`);
+      }
+    });
+
+    req.on('error', function(e) {
+      console.log('problem with request: ' + e.message);
+    });
+
+    const digestedUsers = _.zipObject(users, _.map(users, (user) => {
+      return {
+        'f_name': user,
+        'l_name': '',
+        'team': null,
+      };
+    }));
+    req.end(JSON.stringify(digestedUsers));
+  }
+
+  _sendTaskCodenames(taskCodenames) {
+    const options = {
+      host: this._rwsHost(),
+      port: this._rwsPort(),
+      path: '/tasks/',
+      method: 'PUT',
+      auth: this._rwsAuth(),
+      headers: {'content-type': 'application/json'},
+    };
+
+    const req = http.request(options, function(res) {
+      if (res.statusCode >= 400) {
+        console.log('STATUS: ' + res.statusCode);
+        console.log('HEADERS: ' + JSON.stringify(res.headers));
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+          console.log('BODY: ' + chunk);
+        });
+      } else {
+        console.log(`[*****] Succesfully sent to rws.`);
+      }
+    });
+
+    req.on('error', function(e) {
+      console.log('problem with request: ' + e.message);
+    });
+
+    const digestedTasks = _.zipObject(
+        taskCodenames, _.map(taskCodenames, (taskCodename, index) => {
+      return {
+        'short_name': taskCodename,
+        'name': '',
+        'contest': this._contestCodename,
+        'order': index,
+        'max_score': 100.01,
+        'extra_headers': ['x'],
+        'score_precision': 2,
+        'score_mode': 'max',
+      };
+    }));
+    req.end(JSON.stringify(digestedTasks));
+  }
+
+  _onDataChange() {
+    const scoreboard = this._computeScoreboard();
+    const lastScoreboard = this._lastScoreboard;
+
+    const users = _.keys(scoreboard);
+    const lastUsers = _.keys(lastScoreboard);
+
+    let taskCodenames = [];
+    let lastTaskCodenames = [];
+    if (_.size(users)) {
+      taskCodenames = _.keys(_.find(scoreboard));
+    }
+    if (_.size(lastUsers)) {
+      lastTaskCodenames = _.keys(_.find(lastScoreboard));
+    }
+
+    const deltaAddUsers = _.difference(users, lastUsers);
+    if (_.size(deltaAddUsers)) {
+      console.log(`[*****] ${_.size(deltaAddUsers)} new user added: ` +
+          `${JSON.stringify(deltaAddUsers)}`);
+    }
+    const deltaDelUsers = _.difference(lastUsers, users);
+    if (_.size(deltaDelUsers)) {
+      console.log(`[*****] ${_.size(deltaDelUsers)} new user added: ` +
+          `${JSON.stringify(deltaDelUsers)}`);
+    }
+
+    const deltaAddTaskCodenames = _.difference(
+        taskCodenames, lastTaskCodenames);
+    if (_.size(deltaAddTaskCodenames)) {
+      console.log(`[*****] ${_.size(deltaAddTaskCodenames)} new tasks added: ` +
+          `${JSON.stringify(deltaAddTaskCodenames)}`);
+    }
+    const deltaDelTaskCodenames = _.difference(
+        lastTaskCodenames, taskCodenames);
+    if (_.size(deltaDelTaskCodenames)) {
+      console.log(`[*****] ${_.size(deltaDelTaskCodenames)} new tasks added: ` +
+          `${JSON.stringify(deltaDelTaskCodenames)}`);
+    }
+
+    if (_.size(deltaAddUsers) || _.size(deltaDelUsers)) {
+      this._sendUserList(users);
+    }
+    if (_.size(deltaAddTaskCodenames) || _.size(deltaDelTaskCodenames)) {
+      this._sendTaskCodenames(taskCodenames);
+    }
   }
 }
 
@@ -420,5 +319,5 @@ if (!module.parent) {
     throw new Error('Use --contest');
   }
 
-  new rwsConnector(contestCodename, shurikenAddress, rwsAddress);
+  new RwsConnector(contestCodename, shurikenAddress, rwsAddress);
 }
