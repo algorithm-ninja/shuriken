@@ -2,9 +2,8 @@
 
 const _ = require('lodash');
 const http = require('http');
-const should = require('should');
+const should = require('should/as-function');
 const url = require('url');
-
 const ContestDataSubscriber = require('./contestDataSubscriber.js');
 
 class RwsConnector {

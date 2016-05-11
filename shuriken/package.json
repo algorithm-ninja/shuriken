@@ -3,13 +3,16 @@
   "private": true,
   "dependencies": {
     "ava": "^0.14.0",
+    "cotton": "^0.1.1",
+    "ddp.js": "^2.1.0",
     "fs-extra": "^0.28.0",
     "hiredis": "^0.4.1",
     "kue": "algorithm-ninja/kue#events",
     "lodash": "^4.11.1",
     "mustache": "^2.2.1",
     "should": "^8.3.1",
-    "temp": "^0.8.3"
+    "temp": "^0.8.3",
+    "ws": "^1.1.0"
   },
   "scripts": {
     "test": "ava"

@@ -10,7 +10,7 @@ import {TaskRevisions} from '../api/taskRevisions.js';
 // Libs.
 import {getRouteContest} from '../lib/routeContestUtils.js';
 // Requires.
-const should = require('should');
+const should = require('should/as-function');
 // UI fragments.
 import './contestTasklist.html';
 

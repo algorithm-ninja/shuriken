@@ -9,7 +9,7 @@ import './submissionStatus.html';
 // Requires.
 const moment = require('moment');
 const _ = require('lodash');
-const should = require('should');
+const should = require('should/as-function');
 
 /**
  * #### Context

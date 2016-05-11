@@ -8,7 +8,7 @@ import {TaskRevisions} from '../api/taskRevisions.js';
 import {getRouteContest} from './routeContestUtils.js';
 // Requires.
 const _ = require('lodash');
-const should = require('should');
+const should = require('should/as-function');
 
 /**
  * Return the Task object for the given codename. If no task is found or

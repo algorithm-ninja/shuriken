@@ -4,11 +4,9 @@ const _ = require('lodash');
 const domain = require('domain');
 const kue = require('kue');
 const mustache = require('mustache');
-const should = require('should');
+const should = require('should/as-function');
 const util = require('util');
 const argv = require('minimist')(process.argv.slice(2));
-
-const queue = kue.createQueue();
 
 
 /**
@@ -152,12 +150,14 @@ class BatchEvaluator {
    * Receive a link to the Kue Job and the callback to inform the queue manager
    * that the evaluation has finished.
    *
+   * @param {Queue} queue The Kue queue to use.
    * @param {!Object} job The current Kue Job.
    * @param {function} doneCallback Callback to inform the queue manager that
    *                       the evaluation has finished.
    * @constructor
    */
-  constructor(job, doneCallback) {
+  constructor(queue, job, doneCallback) {
+    this._queue = queue;
     this._kueJob = job;
     this._doneCallback = doneCallback;
 
@@ -545,7 +545,7 @@ class BatchEvaluator {
       message: 'In queue',
     });
 
-    queue.create('subjob', _.clone(testcaseEvaluationConfiguration))
+    this._queue.create('subjob', _.clone(testcaseEvaluationConfiguration))
       .on('complete', function(result) {
         should(result)
             .be.Object()
@@ -629,6 +629,8 @@ module.exports = BatchEvaluator;
 
 // If this is being called from a shell, listen to the queue.
 if (!module.parent) {
+  const queue = kue.createQueue();
+
   queue.process('evaluation', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {
@@ -636,7 +638,7 @@ if (!module.parent) {
       done(err, {});
     });
     d.run(() => {
-      let evaluator = new BatchEvaluator(job, done);
+      let evaluator = new BatchEvaluator(queue, job, done);
       evaluator.run();
     });
   });

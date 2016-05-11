@@ -4,7 +4,7 @@ const fse = require('fs-extra');
 const childProcess = require('child_process');
 const temp = require('temp').track();
 const path = require('path');
-const should = require('should');
+const should = require('should/as-function');
 
 /**
  * Sandbox

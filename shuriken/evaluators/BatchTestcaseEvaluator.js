@@ -1,15 +1,13 @@
 'use strict';
 
-const Sandbox = require('../sandboxes/dummy');
+const Sandbox = require('cotton');
 
 const _ = require('lodash');
 const domain = require('domain');
 const kue = require('kue');
 const path = require('path');
-const should = require('should');
+const should = require('should/as-function');
 const argv = require('minimist')(process.argv.slice(2));
-
-const queue = kue.createQueue();
 
 /**
  * BatchTestcaseEvaluator
@@ -222,19 +220,19 @@ class BatchTestcaseEvaluator {
    */
   _validateUris() {
     //FIXME This is just temporary, until we finally support shuriken://
-    this._config.submissionFileUri.startsWith('file://').should.be.true();
-    this._config.tcInputFileUri.startsWith('file://').should.be.true();
+    should(this._config.submissionFileUri.startsWith('file://')).be.true();
+    should(this._config.tcInputFileUri.startsWith('file://')).be.true();
 
     if (this._config.tcOutputFileUri) {
-      this._config.tcOutputFileUri.startsWith('file://').should.be.true();
+      should(this._config.tcOutputFileUri.startsWith('file://')).be.true();
     }
 
     if (this._config.checkerSourceUri) {
-      this._config.checkerSourceUri.startsWith('file://').should.be.true();
+      should(this._config.checkerSourceUri.startsWith('file://')).be.true();
     }
 
     if (this._config.graderSourceUri) {
-      this._config.graderSourceUri.startsWith('file://').should.be.true();
+      should(this._config.graderSourceUri.startsWith('file://')).be.true();
     }
 
     this._config.submissionFileUri =
@@ -496,7 +494,7 @@ class BatchTestcaseEvaluator {
       return this._publishEvaluation(0.0,
           'Execution failed with exit code ' + status.status);
     }
-    if (!_.isNull(status.signal)) {
+    if (!_.isNull(status.signal) && status.signal !== 0) {
       return this._publishEvaluation(0.0,
           'Execution killed with signal ' + status.signal);
     }
@@ -542,6 +540,8 @@ module.exports = BatchTestcaseEvaluator;
 
 // If this is being called from a shell, listen to the queue.
 if (!module.parent) {
+  const queue = kue.createQueue();
+
   queue.process('subjob', function(job, done) {
     let d = domain.create();
     d.on('error', (err) => {

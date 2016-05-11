@@ -4,7 +4,7 @@
 import {Evaluations} from '../imports/api/evaluations.js';
 // Requires.
 const kue = require('kue');
-const should = require('should');
+const should = require('should/as-function');
 
 /**
  * Monitors the Evaluation collections. Whenever a new evaluation is added,

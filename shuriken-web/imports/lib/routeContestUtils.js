@@ -7,7 +7,7 @@ import {Tasks} from '../api/tasks.js';
 import {TaskRevisions} from '../api/taskRevisions.js';
 // Requires.
 const _ = require('lodash');
-const should = require('should');
+const should = require('should/as-function');
 
 /**
  * Returns the codename of the contest in the current route, if any.

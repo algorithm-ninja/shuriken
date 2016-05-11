@@ -12,7 +12,7 @@ import {Evaluation} from '../models/Evaluation.js';
 import {Submission} from '../models/Submission.js';
 // Requires.
 const _ = require('lodash');
-const should = require('should');
+const should = require('should/as-function');
 const temp = require('temp');
 const fs = require('fs');
 
