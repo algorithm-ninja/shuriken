@@ -1,7 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const sanitizeHtml = require('sanitize-html');
 const should = require('should/as-function');
 
 should.Assertion.add('ObjectId', function() {
@@ -209,8 +208,12 @@ export class Evaluation {
          .and.equalOneOf('complete', 'active', 'failed', 'inactive', 'delayed');
      this.kueState = json.state;
    }
+
+   /* jshint camelcase: false */
    if (!_.isNil(json.created_at)) {
+     /* jshint camelcase: false */
      should(+json.created_at).be.Number();
+     /* jshint camelcase: false */
      this.kueCreatedAt = +json.created_at;
    }
    if (!_.isNil(json.attempts)) {
@@ -227,11 +230,15 @@ export class Evaluation {
          .and.have.properties('maxScore');
      this.kueResult = json.result;
    }
+
+   /* jshint camelcase: false */
    if (!_.isNil(json.progress)) {
+     /* jshint camelcase: false */
      should(+json.progress).be.Number();
      this.kueProgress = +json.progress;
    }
    if (!_.isNil(json.progress_data)) {
+     /* jshint camelcase: false */
      should(json.progress_data).be.String();
      //FIXME Sanitize HTML!
      // this.kueProgressData = sanitizeHtml(json.progress_data, {

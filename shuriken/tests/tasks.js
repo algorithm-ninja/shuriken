@@ -1,14 +1,10 @@
 'use strict';
 
-const path = require('path');
-
-const task1dir = 'file://' + path.join(__dirname, 'task1-a-plus-b');
-
 const task1 = {
-  submissionFileUri: task1dir + '/solution-ok.cpp',
-  tcInputFileUriSchema: task1dir + '/input%d.%d.txt',
-  tcOutputFileUriSchema: task1dir + '/output%d.%d.txt',
-  checkerSourceUri: task1dir + '/checker-mod2.cpp',
+  submissionFileUri: 'shuriken://solution-ok.cpp',
+  tcInputFileUriSchema: 'shuriken://input%d.%d.txt',
+  tcOutputFileUriSchema: 'shuriken://output%d.%d.txt',
+  checkerSourceUri: 'shuriken://checker-mod2.cpp',
   intraSubtaskAggregation: 'sum',
   interSubtaskAggregation: 'sum',
   evaluationStructure: [

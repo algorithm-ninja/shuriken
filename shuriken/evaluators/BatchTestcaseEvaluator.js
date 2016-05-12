@@ -6,8 +6,6 @@ const _ = require('lodash');
 const kue = require('kue');
 const path = require('path');
 const should = require('should/as-function');
-const argv = require('minimist')(process.argv.slice(2));
-
 
 /**
  * BatchTestcaseEvaluator
@@ -15,8 +13,23 @@ const argv = require('minimist')(process.argv.slice(2));
  *
  * This class implements a testcase evaluator for the Batch problem type.
  *
- * Evaluator Configuration
- * -----------------------
+ * #### Evaluator options
+ *
+ * +-------------------------+-------------------------------------+-----------+
+ * | Field name              | Description                         | Mandatory |
+ * +-------------------------+-------------------------------------+-----------+
+ * | fsRoot                  | Path of the file store root dir,    |     Y     |
+ * |                         | corresponding to the shuriken://    |           |
+ * |                         | prefix.                             |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | timeLimitMultiplier     | The time limit multiplier used by   |     Y     |
+ * |                         | this process.                       |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | memoryLimitMultiplier   | The memory limit multiplier used by |     Y     |
+ * |                         | this process.                       |           |
+ * +-------------------------+-------------------------------------+-----------+
+ *
+ * #### Job Configuration
  *
  * These are the fields currently expected by BatchEvaluator:
  *
@@ -45,12 +58,6 @@ const argv = require('minimist')(process.argv.slice(2));
  * | internalMemoryLimit     | A real number indicating how many   |     Y     |
  * |                         | MiB are available for the execution |           |
  * |                         | of internal operations.             |           |
- * +-------------------------+-------------------------------------+-----------+
- * | timeLimitMultiplier     | The time limit multiplier used by   |     N     |
- * |                         | this process.                       |           |
- * +-------------------------+-------------------------------------+-----------+
- * | memoryLimitMultiplier   | The memory limit multiplier used by |     N     |
- * |                         | this process.                       |           |
  * +-------------------------+-------------------------------------+-----------+
  * | submissionLanguage      | A string identifying the language   |     N     |
  * |                         | used in the submissionFile. If null |           |
@@ -88,16 +95,37 @@ class BatchTestcaseEvaluator {
    * @param {!Object} job The current Kue Job.
    * @constructor
    */
-  constructor(job) {
+  constructor(queue, job, options) {
+    this._queue = queue;
     this._kueJob = job;
+
+    this._config = job.data;
+    this._options = options;
+
     this._promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;
     });
 
+    // Parse the options.
+    should(options).have.properties(['fsRoot', 'timeLimitMultiplier',
+        'memoryLimitMultiplier']);
+
+    should(this._options.fsRoot)
+        .be.String();
+
+    should(this._options.timeLimitMultiplier)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
+    should(this._options.memoryLimitMultiplier)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
-    this._config = job.data;
     should(this._config).be.Object();
 
     // Step 1. Check all mandatory fields are there.
@@ -105,11 +133,6 @@ class BatchTestcaseEvaluator {
         'tcOutputFileUri', 'timeLimit', 'memoryLimit']);
 
     // Step 2. Set all non mandatory fields to the default values.
-    this._config.timeLimitMultiplier =
-        _.get(argv, 'time-limit-multiplier', 1);
-    this._config.memoryLimitMultiplier =
-        _.get(argv, 'memory-limit-multiplier', 1);
-
     this._config.graderSourceUri =
         _.get(this._config, 'graderSourceUri', null);
 
@@ -132,16 +155,6 @@ class BatchTestcaseEvaluator {
     should(this._config.tcInputFileUri).be.String();
     should(this._config.tcOutputFileUri).be.String();
 
-    should(this._config.timeLimitMultiplier)
-        .be.Number()
-        .and.not.be.Infinity()
-        .and.be.above(0);
-
-    should(this._config.memoryLimitMultiplier)
-        .be.Number()
-        .and.not.be.Infinity()
-        .and.be.above(0);
-
     should(this._config.submissionLanguage)
         .be.String()
         .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
@@ -162,10 +175,10 @@ class BatchTestcaseEvaluator {
       should(this._config.graderSourceUri).be.String();
     }
 
-    this._config.timeLimit *= this._config.timeLimitMultiplier;
-    this._config.internalTimeLimit *= this._config.timeLimitMultiplier;
-    this._config.memoryLimit *= this._config.memoryLimitMultiplier;
-    this._config.internalMemoryLimit *= this._config.memoryLimitMultiplier;
+    this._config.timeLimit *= this._options.timeLimitMultiplier;
+    this._config.internalTimeLimit *= this._options.timeLimitMultiplier;
+    this._config.memoryLimit *= this._options.memoryLimitMultiplier;
+    this._config.internalMemoryLimit *= this._options.memoryLimitMultiplier;
 
     // Step 4. Check all URIs as a pre-check.
     should(this._validateUris()).be.true();
@@ -220,40 +233,40 @@ class BatchTestcaseEvaluator {
    */
   _validateUris() {
     //FIXME This is just temporary, until we finally support shuriken://
-    should(this._config.submissionFileUri.startsWith('file://')).be.true();
-    should(this._config.tcInputFileUri.startsWith('file://')).be.true();
+    should(this._config.submissionFileUri.startsWith('shuriken://')).be.true();
+    should(this._config.tcInputFileUri.startsWith('shuriken://')).be.true();
 
     if (this._config.tcOutputFileUri) {
-      should(this._config.tcOutputFileUri.startsWith('file://')).be.true();
+      should(this._config.tcOutputFileUri.startsWith('shuriken://')).be.true();
     }
 
     if (this._config.checkerSourceUri) {
-      should(this._config.checkerSourceUri.startsWith('file://')).be.true();
+      should(this._config.checkerSourceUri.startsWith('shuriken://')).be.true();
     }
 
     if (this._config.graderSourceUri) {
-      should(this._config.graderSourceUri.startsWith('file://')).be.true();
+      should(this._config.graderSourceUri.startsWith('shuriken://')).be.true();
     }
 
     this._config.submissionFileUri =
-        this._config.submissionFileUri.replace('file://', '');
+        this._config.submissionFileUri.replace('shuriken://', '');
 
     this._config.tcInputFileUri =
-        this._config.tcInputFileUri.replace('file://', '');
+        this._config.tcInputFileUri.replace('shuriken://', '');
 
     if (this._config.tcOutputFileUri) {
       this._config.tcOutputFileUri =
-          this._config.tcOutputFileUri.replace('file://', '');
+          this._config.tcOutputFileUri.replace('shuriken://', '');
     }
 
     if (this._config.checkerSourceUri) {
       this._config.checkerSourceUri =
-          this._config.checkerSourceUri.replace('file://', '');
+          this._config.checkerSourceUri.replace('shuriken://', '');
     }
 
     if (this._config.graderSourceUri) {
       this._config.graderSourceUri =
-          this._config.graderSourceUri.replace('file://', '');
+          this._config.graderSourceUri.replace('shuriken://', '');
     }
 
     return true;
@@ -550,11 +563,32 @@ module.exports = BatchTestcaseEvaluator;
 
 // If this is being called from a shell, listen to the queue.
 if (!module.parent) {
+  const program = require('commander');
+
+  program
+      .version('0.0.1')
+      .option('--fs-root [path]', 'Root of the network file system.')
+      .option('--time-limit-multiplier [factor]', 'Time limit multiplier.', 1)
+      .option('--memory-limit-multiplier [factor]', 'Memory limit multiplier.',
+          1)
+      .parse(process.argv);
+
+  if (_.isNil(program.fsRoot)) {
+    throw new Error('Use --fs-root');
+  }
+
+  const testcaseEvaluatorOptions = {
+    fsRoot: program.fsRoot,
+    timeLimitMultiplier: program.timeLimitMultiplier,
+    memoryLimitMultiplier: program.memoryLimitMultiplier,
+  };
+
   const queue = kue.createQueue();
 
   queue.process('subjob', function(job, done) {
     try{
-      const evaluator = new BatchTestcaseEvaluator(job);
+      const evaluator = new BatchTestcaseEvaluator(queue, job,
+          testcaseEvaluatorOptions);
       evaluator.getPromise().then(function(result) {
         done(null, result);
       }, function(error) {

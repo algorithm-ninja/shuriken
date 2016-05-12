@@ -1,5 +1,6 @@
 'use strict';
 
+import path from 'path';
 import test from 'ava';
 import _ from 'lodash';
 
@@ -8,17 +9,30 @@ import BatchTestcaseEvaluator from '../evaluators/BatchTestcaseEvaluator';
 import task1 from './tasks';
 import QueueMock from './queueMock';
 
+const evaluatorOptions = {
+  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  internalTimeLimit: 10,
+  internalMemoryLimit: 256,
+};
+
+const testcaseEvaluatorOptions = {
+  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  timeLimitMultiplier: 1,
+  memoryLimitMultiplier: 1,
+};
+
 test('BatchEvaluator correctly creates each subjob, which is correctly ' +
       'evaluated by BatchTestcaseEvaluator', t => {
   function doTest(job, expectedScores) {
     const queue = new QueueMock();
-    new BatchEvaluator(queue, job);
+    new BatchEvaluator(queue, job, evaluatorOptions);
 
     t.is(queue.jobs.length, 9, 'The number of subjobs created does not match ' +
         'the number of testcases');
 
     function subTest(i, job) {
-      let promise = new BatchTestcaseEvaluator(job).getPromise();
+      let promise = new BatchTestcaseEvaluator({}, job,
+          testcaseEvaluatorOptions).getPromise();
 
       promise.then(function(info) {
         t.is(info.score, expectedScores[i], 'Unexpected score');

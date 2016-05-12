@@ -1,7 +1,14 @@
 'use strict';
 
+import path from 'path';
 import test from 'ava';
 import BatchEvaluator from '../evaluators/BatchEvaluator';
+
+const evaluatorOptions = {
+  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  internalTimeLimit: 10,
+  internalMemoryLimit: 256,
+};
 
 test('BatchEvaluator checks job.data is Object', t => {
   const job = {
@@ -9,37 +16,37 @@ test('BatchEvaluator checks job.data is Object', t => {
   };
 
   t.throws(() => {
-    new BatchEvaluator({}, job);
+    new BatchEvaluator({}, job, evaluatorOptions);
   }, /to be an object/);
 });
 
 test('BatchEvaluator checks missing properties', t => {
   const job = {};
   job.data = {
-    submissionFileUri: 'file:///tmp/source.cpp',
-    tcInputFileUriSchema: 'file:///tmp/input.%d.%d.txt',
+    submissionFileUri: 'shuriken://source.cpp',
+    tcInputFileUriSchema: 'shuriken://input.%d.%d.txt',
     evaluationStructure: [],
     timeLimit: 1.0,
     memoryLimit: 256
   };
 
   t.throws(() => {
-    new BatchEvaluator({}, job);
+    new BatchEvaluator({}, job, evaluatorOptions);
   }, /to have property tcOutputFileUriSchema/);
 });
 
 test('BatchEvaluator checks invalid properties', t => {
   const job = {};
   job.data = {
-    submissionFileUri: 'file:///tmp/source.cpp',
-    tcInputFileUriSchema: 'file:///tmp/input.%d.%d.txt',
-    tcOutputFileUriSchema: 'file:///tmp/input.%d.%d.txt',
+    submissionFileUri: 'shuriken://source.cpp',
+    tcInputFileUriSchema: 'shuriken://input.%d.%d.txt',
+    tcOutputFileUriSchema: 'shuriken://input.%d.%d.txt',
     evaluationStructure: [],
     timeLimit: -1.0,
     memoryLimit: 256
   };
 
   t.throws(() => {
-    new BatchEvaluator({}, job);
+    new BatchEvaluator({}, job, evaluatorOptions);
   }, /to be above 0/);
 });

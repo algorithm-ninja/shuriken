@@ -5,7 +5,6 @@ const kue = require('kue');
 const mustache = require('mustache');
 const should = require('should/as-function');
 const util = require('util');
-const argv = require('minimist')(process.argv.slice(2));
 
 
 /**
@@ -33,9 +32,24 @@ const argv = require('minimist')(process.argv.slice(2));
  * > `Score = interSubtaskAggregation(X_1, X_2, ..., X_M).`
  *
  *
- * #### Evaluator Configuration
+ * #### Evaluator options
  *
- * These are the fields currently expected by BatchEvaluator:
+ * +-------------------------+-------------------------------------+-----------+
+ * | Field name              | Description                         | Mandatory |
+ * +-------------------------+-------------------------------------+-----------+
+ * | fsRoot                  | Path of the file store root dir,    |     Y     |
+ * |                         | corresponding to the shuriken://    |           |
+ * |                         | prefix.                             |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalTimeLimit       | see BatchTestcaseEvaluator.         |     Y     |
+ * +-------------------------+-------------------------------------+-----------+
+ * | internalMemoryLimit     | see BatchTestcaseEvaluator.         |     Y     |
+ * +-------------------------+-------------------------------------+-----------+
+ *
+ *
+ * #### Job Configuration
+ *
+ * These are the job fields currently expected by BatchEvaluator:
  *
  * +-------------------------+-------------------------------------+-----------+
  * | Field name              | Description                         | Mandatory |
@@ -64,12 +78,6 @@ const argv = require('minimist')(process.argv.slice(2));
  * |                         |   BatchTestcaseEvaluator            |           |
  * +-------------------------+-------------------------------------+-----------+
  * | memoryLimit             | Forwarded field, see:               |     Y     |
- * |                         |   BatchTestcaseEvaluator            |           |
- * +-------------------------+-------------------------------------+-----------+
- * | internalTimeLimit       | Forwarded field, see:               |     N     |
- * |                         |   BatchTestcaseEvaluator            |           |
- * +-------------------------+-------------------------------------+-----------+
- * | internalMemoryLimit     | Forwarded field, see:               |     N     |
  * |                         |   BatchTestcaseEvaluator            |           |
  * +-------------------------+-------------------------------------+-----------+
  * | submissionFileUri       | Forwarded field, see:               |     Y     |
@@ -150,19 +158,40 @@ class BatchEvaluator {
    *
    * @param {Queue} queue The Kue queue to use.
    * @param {!Object} job The current Kue Job.
+   * @param {!Object} options.
    * @constructor
    */
-  constructor(queue, job) {
+  constructor(queue, job, options) {
     this._queue = queue;
     this._kueJob = job;
+
+    this._config = job.data;
+    this._options = options;
+
     this._promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;
     });
 
+    // Parse the options.
+    should(options).have.properties(['fsRoot', 'internalTimeLimit',
+        'internalMemoryLimit']);
+
+    should(this._options.fsRoot)
+        .be.String();
+
+    should(this._options.internalTimeLimit)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
+    should(this._options.internalMemoryLimit)
+        .be.Number()
+        .and.not.be.Infinity()
+        .and.be.above(0);
+
     // Parse the configuration for this job (found in job.data()).
     // Step 0. jobConfig must be an Object.
-    this._config = job.data;
     should(this._config).be.Object();
 
     // Step 1. Check that all mandatory fields are there.
@@ -175,10 +204,6 @@ class BatchEvaluator {
         _.get(this._config, 'intraSubtaskAggregation', 'sum');
     this._config.interSubtaskAggregation =
         _.get(this._config, 'interSubtaskAggregation', 'sum');
-    this._config.internalTimeLimit =
-        _.get(argv, 'internal-time-limit', 10);
-    this._config.internalMemoryLimit =
-        _.get(argv, 'internal-memory-limit', 256);
 
     // Step 3. For each field, check values are feasible.
     should(this._config.tcInputFileUriSchema).be.String();
@@ -192,16 +217,6 @@ class BatchEvaluator {
         .and.be.above(0);
 
     should(this._config.memoryLimit)
-        .be.Number()
-        .and.not.be.Infinity()
-        .and.be.above(0);
-
-    should(this._config.internalTimeLimit)
-        .be.Number()
-        .and.not.be.Infinity()
-        .and.be.above(0);
-
-    should(this._config.internalMemoryLimit)
         .be.Number()
         .and.not.be.Infinity()
         .and.be.above(0);
@@ -592,8 +607,8 @@ class BatchEvaluator {
       let conf = {
         timeLimit: this._config.timeLimit,
         memoryLimit: this._config.memoryLimit,
-        internalTimeLimit: this._config.internalTimeLimit,
-        internalMemoryLimit: this._config.internalMemoryLimit,
+        internalTimeLimit: this._options.internalTimeLimit,
+        internalMemoryLimit: this._options.internalMemoryLimit,
         submissionFileUri: this._config.submissionFileUri,
         submissionLanguage: this._config.submissionLanguage
       };
@@ -639,11 +654,32 @@ module.exports = BatchEvaluator;
 
 // If this is being called from a shell, listen to the queue.
 if (!module.parent) {
+  const program = require('commander');
+
+  program
+    .version('0.0.1')
+    .option('--fs-root [path]', 'Root of the network file system.')
+    .option('--internal-time-limit [seconds]',
+        'Time limit for internal operations.', 10)
+    .option('--internal-memory-limit [MiBs]',
+        'Memory limit for internal operations', 256)
+    .parse(process.argv);
+
+  if (_.isNil(program.fsRoot)) {
+    throw new Error('Use --fs-root');
+  }
+
+  const evaluatorOptions = {
+    fsRoot: program.fsRoot,
+    internalTimeLimit: program.internalTimeLimit,
+    internalMemoryLimit: program.internalMemoryLimit,
+  };
+
   const queue = kue.createQueue();
 
   queue.process('evaluation', function(job, done) {
     try {
-      const evaluator = new BatchEvaluator(queue, job);
+      const evaluator = new BatchEvaluator(queue, job, evaluatorOptions);
       evaluator.getPromise().then(function(result) {
         done(null, result);
       }, function(error) {

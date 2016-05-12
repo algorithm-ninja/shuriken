@@ -32,11 +32,11 @@
     "maxdepth"      : false,    // {int} Max depth of nested blocks (within functions)
     "maxstatements" : false,    // {int} Max number statements per function
     "maxcomplexity" : false,    // {int} Max cyclomatic complexity per function
-    "maxlen"        : false,    // {int} Max number of characters per line
+    "maxlen"        : 80,       // {int} Max number of characters per line
     "varstmt"       : true,     // true: Disallow any var statements. Only `let` and `const` are allowed.
 
     "node"          : true,     // We are using nodes
-    "white"         : false,    // true: Check against strict whitespace and indentation rules
+    "white"         : true,     // true: Check against strict whitespace and indentation rules
 
     // Custom globals, from http://docs.meteor.com, in the order they appear there
     "globals"       : {
