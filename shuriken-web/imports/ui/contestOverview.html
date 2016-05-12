@@ -1,0 +1,11 @@
+<template name="contestOverview">
+  {{#if isValidContestRoute}}
+    <h1>{{routeContest.title}} (<tt>{{routeContest.codename}}</tt>)</h1>
+    <hr>
+    Click on the tasks on the left.
+  {{else}}
+    <h3>
+      Not available :-(
+    </h3>
+  {{/if}}
+</template>

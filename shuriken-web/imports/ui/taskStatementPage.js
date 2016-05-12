@@ -48,7 +48,7 @@ Template.taskStatementPage.helpers({
    *
    * @return {!Contest}
    */
-'routeContest'() {
+  'routeContest'() {
     return getRouteContest(this);
   },
 

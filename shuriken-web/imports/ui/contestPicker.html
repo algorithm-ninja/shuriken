@@ -1,0 +1,8 @@
+<template name="contestPicker">
+  <h1>Pick a contest:</h1>
+  <ul>
+  {{#each contest in contests}}
+    <li><a href="/contest/{{contest.codename}}">{{contest.codename}}</a></li>
+  {{/each}}
+  </ul>
+</template>
