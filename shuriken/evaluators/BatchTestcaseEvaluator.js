@@ -18,7 +18,7 @@ const should = require('should/as-function');
  * +-------------------------+-------------------------------------+-----------+
  * | Field name              | Description                         | Mandatory |
  * +-------------------------+-------------------------------------+-----------+
- * | fsRoot                  | Path of the file store root dir,    |     Y     |
+ * | fileStoreRoot           | Path of the file store root dir,    |     Y     |
  * |                         | corresponding to the shuriken://    |           |
  * |                         | prefix.                             |           |
  * +-------------------------+-------------------------------------+-----------+
@@ -108,10 +108,10 @@ class BatchTestcaseEvaluator {
     });
 
     // Parse the options.
-    should(options).have.properties(['fsRoot', 'timeLimitMultiplier',
+    should(options).have.properties(['fileStoreRoot', 'timeLimitMultiplier',
         'memoryLimitMultiplier']);
 
-    should(this._options.fsRoot)
+    should(this._options.fileStoreRoot)
         .be.String();
 
     should(this._options.timeLimitMultiplier)
@@ -233,40 +233,40 @@ class BatchTestcaseEvaluator {
    */
   _validateUris() {
     //FIXME This is just temporary, until we finally support shuriken://
-    should(this._config.submissionFileUri.startsWith('shuriken://')).be.true();
-    should(this._config.tcInputFileUri.startsWith('shuriken://')).be.true();
+    should(this._config.submissionFileUri).startWith('shuriken://');
+    should(this._config.tcInputFileUri).startWith('shuriken://');
 
     if (this._config.tcOutputFileUri) {
-      should(this._config.tcOutputFileUri.startsWith('shuriken://')).be.true();
+      should(this._config.tcOutputFileUri).startWith('shuriken://');
     }
 
     if (this._config.checkerSourceUri) {
-      should(this._config.checkerSourceUri.startsWith('shuriken://')).be.true();
+      should(this._config.checkerSourceUri).startWith('shuriken://');
     }
 
     if (this._config.graderSourceUri) {
-      should(this._config.graderSourceUri.startsWith('shuriken://')).be.true();
+      should(this._config.graderSourceUri).startWith('shuriken://');
     }
 
-    this._config.submissionFileUri =
-        this._config.submissionFileUri.replace('shuriken://', '');
+    this._config.submissionFileUri = path.join(this._options.fileStoreRoot,
+        this._config.submissionFileUri.replace('shuriken://', ''));
 
-    this._config.tcInputFileUri =
-        this._config.tcInputFileUri.replace('shuriken://', '');
+    this._config.tcInputFileUri = path.join(this._options.fileStoreRoot,
+        this._config.tcInputFileUri.replace('shuriken://', ''));
 
     if (this._config.tcOutputFileUri) {
-      this._config.tcOutputFileUri =
-          this._config.tcOutputFileUri.replace('shuriken://', '');
+      this._config.tcOutputFileUri = path.join(this._options.fileStoreRoot,
+          this._config.tcOutputFileUri.replace('shuriken://', ''));
     }
 
     if (this._config.checkerSourceUri) {
-      this._config.checkerSourceUri =
-          this._config.checkerSourceUri.replace('shuriken://', '');
+      this._config.checkerSourceUri = path.join(this._options.fileStoreRoot,
+          this._config.checkerSourceUri.replace('shuriken://', ''));
     }
 
     if (this._config.graderSourceUri) {
-      this._config.graderSourceUri =
-          this._config.graderSourceUri.replace('shuriken://', '');
+      this._config.graderSourceUri = path.join(this._options.fileStoreRoot,
+          this._config.graderSourceUri.replace('shuriken://', ''));
     }
 
     return true;
@@ -578,7 +578,7 @@ if (!module.parent) {
   }
 
   const testcaseEvaluatorOptions = {
-    fsRoot: program.fsRoot,
+    fileStoreRoot: program.fsRoot,
     timeLimitMultiplier: program.timeLimitMultiplier,
     memoryLimitMultiplier: program.memoryLimitMultiplier,
   };

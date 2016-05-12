@@ -7,13 +7,16 @@ import {Evaluations} from './evaluations.js';
 import {Submissions} from './submissions.js';
 import {Tasks} from './tasks.js';
 import {TaskRevisions} from './taskRevisions.js';
+// import {Users} from './users.js';  //FIXME
 // Models.
 import {Evaluation} from '../models/Evaluation.js';
 import {Submission} from '../models/Submission.js';
 // Requires.
 const _ = require('lodash');
 const should = require('should/as-function');
-const temp = require('temp');
+// const slug = require('slug');  //FIXME
+const moment = require('moment');
+const path = require('path');
 const fs = require('fs');
 
 // Define Kue's queue object.
@@ -23,10 +26,11 @@ if (Meteor.isServer) {
   queue = kue.createQueue();
 }
 
-const _addSubmission = function(userId, contest, task, taskRevision,
-    submissionFileUri, submissionTime) {
+const _addSubmission = function(submissionId, userId, contest, task,
+    taskRevision, submissionFileUri, submissionTime) {
   // Step 1. Create the submission object.
   const submission = new Submission({
+    _id: submissionId,
     userId: userId,
     contestId: contest._id,
     taskId: task._id,
@@ -45,7 +49,7 @@ const _addSubmission = function(userId, contest, task, taskRevision,
 
       let payload = taskRevision.evaluatorConf;
       Object.assign(payload, {
-        submissionFileUri: 'file://' + submission.submissionFileUri
+        submissionFileUri: submission.submissionFileUri
       });
 
       let job = queue.create(queueName, payload);
@@ -78,13 +82,18 @@ const _addSubmission = function(userId, contest, task, taskRevision,
 Meteor.methods({
   'submissions.insert'(contestId, taskId, submissionData) {
     // Record submission time (as early as possible)
-    const submissionTime = new Date().getTime();
+    const submissionTime = new Date();
+    const formattedSubmissionTime =
+        moment(submissionTime).format('YYYY-MM-DD__HH-mm-ss-SSSSS');
 
     //FIXME check if user can submit to the current problem.
 
+    // const user = Users.findOne({_id: this.userId});  //FIXME
+    // should(user).be.ok().and.have.property('username');  //FIXME
+
     const contest = Contests.findOne({_id: contestId});
     should(contest.isLoaded()).be.true();
-    // Let's load the task to make sure it exists.
+
     const task = Tasks.findOne({_id: taskId});
     should(task.isLoaded()).be.true();
 
@@ -103,20 +112,31 @@ Meteor.methods({
     should(taskRevision.isLoaded()).be.true();
 
     // Save the data to a new file (in the filesystem) and create a submission
-    //FIXME save this file using the filesystem wrapper?
-    temp.open({
-      prefix: 'submission',
-      suffix: '.cpp'
-    }, Meteor.bindEnvironment((err, info) => {
-      if (!err) {
-        fs.write(info.fd, submissionData);
-        fs.close(info.fd, Meteor.bindEnvironment((err) => {
-          if (!err) {
-            _addSubmission(this.userId, contest, task, taskRevision, info.path,
-                submissionTime);
-          }
+    const submissionId = new Mongo.ObjectID();
+    const submissionFilename = `${formattedSubmissionTime}__${task.codename}` +
+        // `__${slug(user.username)}__${submissionId}.cpp`;  //FIXME
+        `__${this.userId}__${submissionId}.cpp`;
+    const submissionFileUri = 'shuriken://' +
+        path.join('submissions', submissionFilename);
+    const realSubmissionFileUri = path.join(Meteor.settings.fileStoreRoot,
+        'submissions', submissionFilename);
+
+    console.log(Meteor.settings);
+
+    console.log(realSubmissionFileUri);
+    fs.open(realSubmissionFileUri, 'w', Meteor.bindEnvironment((err, fd) => {
+      should(err).not.be.ok();
+      should(fd).be.a.Number();
+      console.log(fd + ' ' + typeof fd);
+      should(submissionData).be.a.String();
+      fs.write(fd, submissionData, 0, 'utf-8', Meteor.bindEnvironment((error) => {
+        should(error).not.be.ok();
+        fs.close(fd, Meteor.bindEnvironment((error) => {
+          should(error).not.be.ok();
+          _addSubmission(submissionId, this.userId, contest, task,
+              taskRevision, submissionFileUri, submissionTime.getTime());
         }));
-      }
+      }));
     }));
   },
 });
