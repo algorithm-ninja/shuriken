@@ -16,7 +16,7 @@ const evaluatorOptions = {
 };
 
 const testcaseEvaluatorOptions = {
-  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   timeLimitMultiplier: 1,
   memoryLimitMultiplier: 1,
 };

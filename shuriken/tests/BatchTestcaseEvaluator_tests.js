@@ -5,7 +5,7 @@ import test from 'ava';
 import BatchTestcaseEvaluator from '../evaluators/BatchTestcaseEvaluator';
 
 const testcaseEvaluatorOptions = {
-  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   timeLimitMultiplier: 1,
   memoryLimitMultiplier: 1,
 };
