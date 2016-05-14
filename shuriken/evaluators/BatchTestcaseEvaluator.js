@@ -539,6 +539,9 @@ class BatchTestcaseEvaluator {
           ['--ignore-trailing-space', 'output.txt', 'correct.txt']);
     }
 
+    // Delete everything.
+    this._sandbox.teardown();
+
     //FIXME Look at output instead of exit code.
     if (_.isNull(status.status) || !_.isNil(status.error)) {
       return this._fail('Exception while checking the answer.', status);
