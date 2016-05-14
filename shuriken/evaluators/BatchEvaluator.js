@@ -45,6 +45,8 @@ const util = require('util');
  * +-------------------------+-------------------------------------+-----------+
  * | internalMemoryLimit     | see BatchTestcaseEvaluator.         |     Y     |
  * +-------------------------+-------------------------------------+-----------+
+ * | redisConnectionString   | URL of the Redis instance to use.   |     N     |
+ * +-------------------------+-------------------------------------+-----------+
  *
  *
  * #### Job Configuration
@@ -175,7 +177,7 @@ class BatchEvaluator {
 
     // Parse the options.
     should(options).have.properties(['fsRoot', 'internalTimeLimit',
-        'internalMemoryLimit']);
+        'internalMemoryLimit', 'redisConnectionString']);
 
     should(this._options.fsRoot)
         .be.String();
@@ -663,6 +665,8 @@ if (!module.parent) {
         'Time limit for internal operations.', 10)
     .option('--internal-memory-limit [MiBs]',
         'Memory limit for internal operations', 256)
+    .option('--redis-url [URL]', 'Redis connection string',
+        'redis://localhost:6379')
     .parse(process.argv);
 
   if (_.isNil(program.fsRoot)) {
@@ -673,9 +677,12 @@ if (!module.parent) {
     fsRoot: program.fsRoot,
     internalTimeLimit: program.internalTimeLimit,
     internalMemoryLimit: program.internalMemoryLimit,
+    redisConnectionString: program.redisUrl,
   };
 
-  const queue = kue.createQueue();
+  const queue = kue.createQueue({
+    redis: evaluatorOptions.redisConnectionString
+  });
 
   queue.process('evaluation', function(job, done) {
     try {

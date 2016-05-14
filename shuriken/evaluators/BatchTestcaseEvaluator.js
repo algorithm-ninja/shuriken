@@ -29,6 +29,8 @@ const should = require('should/as-function');
  * | memoryLimitMultiplier   | The memory limit multiplier used by |     Y     |
  * |                         | this process.                       |           |
  * +-------------------------+-------------------------------------+-----------+
+ * | redisConnectionString   | URL of the Redis instance to use.   |     N     |
+ * +-------------------------+-------------------------------------+-----------+
  *
  * #### Job Configuration
  *
@@ -110,7 +112,7 @@ class BatchTestcaseEvaluator {
 
     // Parse the options.
     should(options).have.properties(['fileStoreRoot', 'timeLimitMultiplier',
-        'memoryLimitMultiplier']);
+        'memoryLimitMultiplier', 'redisConnectionString']);
 
     should(this._options.fileStoreRoot)
         .be.String();
@@ -571,6 +573,8 @@ if (!module.parent) {
       .option('--time-limit-multiplier [factor]', 'Time limit multiplier.', 1)
       .option('--memory-limit-multiplier [factor]', 'Memory limit multiplier.',
           1)
+      .option('--redis-url [URL]', 'Redis connection string',
+          'redis://localhost:6379')
       .parse(process.argv);
 
   if (_.isNil(program.fsRoot)) {
@@ -581,9 +585,12 @@ if (!module.parent) {
     fileStoreRoot: program.fsRoot,
     timeLimitMultiplier: program.timeLimitMultiplier,
     memoryLimitMultiplier: program.memoryLimitMultiplier,
+    redisConnectionString: program.redisUrl,
   };
 
-  const queue = kue.createQueue();
+  const queue = kue.createQueue({
+    redis: testcaseEvaluatorOptions.redisConnectionString
+  });
 
   queue.process('subjob', function(job, done) {
     try{
