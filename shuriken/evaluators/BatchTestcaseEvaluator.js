@@ -1,6 +1,7 @@
 'use strict';
 
 const Sandbox = require('cotton');
+const FileDB = require('shuriken-fs');
 
 const _ = require('lodash');
 const kue = require('kue');
@@ -183,7 +184,8 @@ class BatchTestcaseEvaluator {
     // Step 4. Check all URIs as a pre-check.
     should(this._validateUris()).be.true();
 
-    // Step 5. Create the sandbox object.
+    // Step 5. Create the fileDB and sandbox objects.
+    this._fileDB = new FileDB(this._options.fileStoreRoot);
     this._sandbox = new Sandbox();
 
     // Step 6. Start evaluation.
@@ -248,27 +250,6 @@ class BatchTestcaseEvaluator {
       should(this._config.graderSourceUri).startWith('shuriken://');
     }
 
-    this._config.submissionFileUri = path.join(this._options.fileStoreRoot,
-        this._config.submissionFileUri.replace('shuriken://', ''));
-
-    this._config.tcInputFileUri = path.join(this._options.fileStoreRoot,
-        this._config.tcInputFileUri.replace('shuriken://', ''));
-
-    if (this._config.tcOutputFileUri) {
-      this._config.tcOutputFileUri = path.join(this._options.fileStoreRoot,
-          this._config.tcOutputFileUri.replace('shuriken://', ''));
-    }
-
-    if (this._config.checkerSourceUri) {
-      this._config.checkerSourceUri = path.join(this._options.fileStoreRoot,
-          this._config.checkerSourceUri.replace('shuriken://', ''));
-    }
-
-    if (this._config.graderSourceUri) {
-      this._config.graderSourceUri = path.join(this._options.fileStoreRoot,
-          this._config.graderSourceUri.replace('shuriken://', ''));
-    }
-
     return true;
   }
 
@@ -301,6 +282,20 @@ class BatchTestcaseEvaluator {
   }
 
   /**
+   * Procedure to copy a file from the file-store to an arbitrary location.
+   *
+   * @param sourceRelativePath the source path, in the file store root
+   * @param destinationAbsolutePath the destination path
+   * @private
+   */
+  _copy(sourceRelativePath, destinationAbsolutePath) {
+    this._fileDB.get(sourceRelativePath)
+        .copyToSync(destinationAbsolutePath, (err) => {
+      should(err).not.be.ok(`Can't write to file: ${destinationAbsolutePath}`);
+    });
+  }
+
+  /**
    * If necessary, compile the source and the grader. For languages such as
    * Python, this is a no-op.
    *
@@ -323,12 +318,14 @@ class BatchTestcaseEvaluator {
       helperFileUris = [];
     }
 
-    this._sandbox.add(entryPointUri);
+    this._copy(entryPointUri,
+        path.join(this._sandbox.getRoot(), path.basename(entryPointUri)));
+
     _.each(helperFileUris, (helperFileUri) => {
-      this._sandbox.add(helperFileUri);
+      this._copy(helperFileUri,
+          path.join(this._sandbox.getRoot(), path.basename(helperFileUri)));
     });
 
-    //FIXME this doesn't work with actual URIs.
     const relativeEntryPointPath = path.basename(entryPointUri);
     const relativeHelperFilePaths = _.map(helperFileUris, (helperFileUri) => {
       return path.basename(helperFileUri);
@@ -488,9 +485,10 @@ class BatchTestcaseEvaluator {
     }
 
     // Run contestant solution.
-    this._sandbox.add(this._config.tcInputFileUri, 'input.txt')
-        .stdin('input.txt')
-        .stdout('output.txt');
+    this._copy(this._config.tcInputFileUri,
+        path.join(this._sandbox.getRoot(), 'input.txt'));
+
+    this._sandbox.stdin('input.txt').stdout('output.txt');
 
     status = this._runUserExecutable(status.executableFilename,
         this._config.submissionLanguage);
@@ -515,7 +513,8 @@ class BatchTestcaseEvaluator {
 
     // Check if solution is correct.
     if (this._config.tcOutputFileUri) {
-      this._sandbox.add(this._config.tcOutputFileUri, 'correct.txt');
+      this._copy(this._config.tcOutputFileUri,
+          path.join(this._sandbox.getRoot(), 'correct.txt'));
     }
 
     if (this._config.checkerSourceUri) {
@@ -523,16 +522,17 @@ class BatchTestcaseEvaluator {
           this._config.checkerLanguage);
 
       // Restore the original input file (the user might have tampered with it)
-      this._sandbox.add(this._config.tcInputFileUri, 'input.txt');
+      this._copy(this._config.tcInputFileUri,
+          path.join(this._sandbox.getRoot(), 'input.txt'));
 
       status = this._runInternalExecutable(status.executableFilename,
           this._config.checkerLanguage,
           ['output.txt', 'correct.txt', 'input.txt']);
     } else {
-      //FIXME Receive these as program options.
       this._sandbox
-          .timeLimit(10000)
-          .memoryLimit(100);
+          .timeLimit(this._config.internalTimeLimit)
+          .memoryLimit(this._config.internalMemoryLimit);
+
       status = this._sandbox.run('diff',
           ['--ignore-trailing-space', 'output.txt', 'correct.txt']);
     }

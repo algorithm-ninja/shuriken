@@ -3,7 +3,7 @@
   "private": true,
   "dependencies": {
     "ava": "^0.14.0",
-    "cotton": "^0.1.1",
+    "cotton": "^0.2.2",
     "ddp.js": "^2.1.0",
     "fs-extra": "^0.28.0",
     "hiredis": "^0.4.1",
@@ -12,7 +12,8 @@
     "mustache": "^2.2.1",
     "queue": "^4.0.0",
     "should": "^8.3.1",
-    "shuriken-fs": "^0.3.0",
+    "shuriken-fs": "^0.7.0",
+    "sync": "^0.2.5",
     "temp": "^0.8.3",
     "ws": "^1.1.0"
   },

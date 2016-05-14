@@ -7,17 +7,17 @@ import {Evaluations} from './evaluations.js';
 import {Submissions} from './submissions.js';
 import {Tasks} from './tasks.js';
 import {TaskRevisions} from './taskRevisions.js';
-// import {Users} from './users.js';  //FIXME
 // Models.
 import {Evaluation} from '../models/Evaluation.js';
 import {Submission} from '../models/Submission.js';
 // Requires.
 const _ = require('lodash');
 const should = require('should/as-function');
-// const slug = require('slug');  //FIXME
+const slug = require('slug');
 const moment = require('moment');
 const path = require('path');
-const fs = require('fs');
+
+import FileDB from 'shuriken-fs';
 
 // Define Kue's queue object.
 const kue = require('kue');
@@ -86,10 +86,14 @@ Meteor.methods({
     const formattedSubmissionTime =
         moment(submissionTime).format('YYYY-MM-DD__HH-mm-ss-SSSSS');
 
+    // Sanity check
+    should(submissionData).be.a.String();
+    should(submissionData.length).be.lessThan(50 * 1024);  // 50 KiB
+
     //FIXME check if user can submit to the current problem.
 
-    // const user = Users.findOne({_id: this.userId});  //FIXME
-    // should(user).be.ok().and.have.property('username');  //FIXME
+    const user = Meteor.users.findOne({_id: this.userId});
+    should(user).be.ok().and.have.property('username');
 
     const contest = Contests.findOne({_id: contestId});
     should(contest.isLoaded()).be.true();
@@ -114,29 +118,19 @@ Meteor.methods({
     // Save the data to a new file (in the filesystem) and create a submission
     const submissionId = new Mongo.ObjectID();
     const submissionFilename = `${formattedSubmissionTime}__${task.codename}` +
-        // `__${slug(user.username)}__${submissionId}.cpp`;  //FIXME
-        `__${this.userId}__${submissionId}.cpp`;
+        `__${slug(user.username)}__${submissionId}.cpp`;
     const submissionFileUri = 'shuriken://' +
         path.join('submissions', submissionFilename);
-    const realSubmissionFileUri = path.join(Meteor.settings.fileStoreRoot,
-        'submissions', submissionFilename);
 
-    console.log(Meteor.settings);
+    const fileHandle = new FileDB(Meteor.settings.fileStoreRoot)
+        .get(submissionFileUri);
 
-    console.log(realSubmissionFileUri);
-    fs.open(realSubmissionFileUri, 'w', Meteor.bindEnvironment((err, fd) => {
-      should(err).not.be.ok();
-      should(fd).be.a.Number();
-      console.log(fd + ' ' + typeof fd);
-      should(submissionData).be.a.String();
-      fs.write(fd, submissionData, 0, 'utf-8', Meteor.bindEnvironment((error) => {
-        should(error).not.be.ok();
-        fs.close(fd, Meteor.bindEnvironment((error) => {
-          should(error).not.be.ok();
-          _addSubmission(submissionId, this.userId, contest, task,
-              taskRevision, submissionFileUri, submissionTime.getTime());
-        }));
-      }));
+    fileHandle.write(submissionData, Meteor.bindEnvironment((err) => {
+      should(err).not.be.ok(`Can't open file: could it be a file system ` +
+          `error or a lack of space? [shuriken://${submissionFileUri}]`);
+
+      _addSubmission(submissionId, this.userId, contest, task, taskRevision,
+          submissionFileUri, submissionTime.getTime());
     }));
   },
 });
