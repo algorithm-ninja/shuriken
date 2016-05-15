@@ -37,7 +37,7 @@ const util = require('util');
  * +-------------------------+-------------------------------------+-----------+
  * | Field name              | Description                         | Mandatory |
  * +-------------------------+-------------------------------------+-----------+
- * | fsRoot                  | Path of the file store root dir,    |     Y     |
+ * | fileStoreRoot           | Path of the file store root dir,    |     Y     |
  * |                         | corresponding to the shuriken://    |           |
  * |                         | prefix.                             |           |
  * +-------------------------+-------------------------------------+-----------+
@@ -176,10 +176,10 @@ class BatchEvaluator {
     });
 
     // Parse the options.
-    should(options).have.properties(['fsRoot', 'internalTimeLimit',
+    should(options).have.properties(['fileStoreRoot', 'internalTimeLimit',
         'internalMemoryLimit', 'redisConnectionString']);
 
-    should(this._options.fsRoot)
+    should(this._options.fileStoreRoot)
         .be.String();
 
     should(this._options.internalTimeLimit)
@@ -674,7 +674,7 @@ if (!module.parent) {
   }
 
   const evaluatorOptions = {
-    fsRoot: program.fsRoot,
+    fileStoreRoot: program.fsRoot,
     internalTimeLimit: program.internalTimeLimit,
     internalMemoryLimit: program.internalMemoryLimit,
     redisConnectionString: program.redisUrl,

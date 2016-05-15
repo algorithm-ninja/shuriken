@@ -5,9 +5,10 @@ import test from 'ava';
 import BatchEvaluator from '../evaluators/BatchEvaluator';
 
 const evaluatorOptions = {
-  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   internalTimeLimit: 10,
   internalMemoryLimit: 256,
+  redisConnectionString: 'redis://localhost:6379',
 };
 
 test('BatchEvaluator checks job.data is Object', t => {

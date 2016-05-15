@@ -8,6 +8,7 @@ const testcaseEvaluatorOptions = {
   fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   timeLimitMultiplier: 1,
   memoryLimitMultiplier: 1,
+  redisConnectionString: 'redis://localhost:6379',
 };
 
 

@@ -10,15 +10,17 @@ import task1 from './tasks';
 import QueueMock from './queueMock';
 
 const evaluatorOptions = {
-  fsRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   internalTimeLimit: 10,
   internalMemoryLimit: 256,
+  redisConnectionString: 'redis://localhost:6379',
 };
 
 const testcaseEvaluatorOptions = {
   fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
   timeLimitMultiplier: 1,
   memoryLimitMultiplier: 1,
+  redisConnectionString: 'redis://localhost:6379',
 };
 
 test('BatchEvaluator correctly creates each subjob, which is correctly ' +
