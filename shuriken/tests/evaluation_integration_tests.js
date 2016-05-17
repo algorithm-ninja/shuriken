@@ -1,23 +1,30 @@
 'use strict';
 
-import path from 'path';
-import test from 'ava';
 import _ from 'lodash';
+import FileDB from 'shuriken-fs';
+import fs from 'fs';
+import path from 'path';
+import temp from 'temp';
+import test from 'ava';
 
 import BatchEvaluator from '../evaluators/BatchEvaluator';
 import BatchTestcaseEvaluator from '../evaluators/BatchTestcaseEvaluator';
 import task1 from './tasks';
 import QueueMock from './queueMock';
 
+// Destroy the folder when tests are done.
+temp.track();
+const tempFolder = temp.mkdirSync('shuriken-tests');
+
 const evaluatorOptions = {
-  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: tempFolder,
   internalTimeLimit: 10,
   internalMemoryLimit: 256,
   redisConnectionString: 'redis://localhost:6379',
 };
 
 const testcaseEvaluatorOptions = {
-  fileStoreRoot: path.join(__dirname, 'task1-a-plus-b'),
+  fileStoreRoot: tempFolder,
   timeLimitMultiplier: 1,
   memoryLimitMultiplier: 1,
   redisConnectionString: 'redis://localhost:6379',
@@ -25,6 +32,15 @@ const testcaseEvaluatorOptions = {
 
 test('BatchEvaluator correctly creates each subjob, which is correctly ' +
       'evaluated by BatchTestcaseEvaluator', t => {
+  // Copy or replace folder content.
+  const fileDB = new FileDB(tempFolder);
+
+  //FIXME: use importers when the standard format is ready.
+  _.each(fs.readdirSync(path.join(__dirname, 'task1-a-plus-b')), filename => {
+    const realpath = path.join(__dirname, 'task1-a-plus-b', filename);
+    fileDB.get(`shuriken://${filename}`).copyFromSync(realpath);
+  });
+
   function doTest(job, expectedScores) {
     const queue = new QueueMock();
     new BatchEvaluator(queue, job, evaluatorOptions);
