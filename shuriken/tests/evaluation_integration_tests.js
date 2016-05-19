@@ -53,7 +53,8 @@ test('BatchEvaluator correctly creates each subjob, which is correctly ' +
           testcaseEvaluatorOptions).getPromise();
 
       promise.then(function(info) {
-        t.is(info.score, expectedScores[i], 'Unexpected score');
+        t.is(info.score, expectedScores[i], 'Unexpected score. Result: ' +
+            JSON.stringify(info));
       }, function(error) {
         if (_.isNull(error)) {
           t.fail('The evaluation failed unexpectedly');

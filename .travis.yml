@@ -1,0 +1,28 @@
+sudo: required  # only to cp inside /usr/local/bin
+
+language: node_js
+node_js:
+  - 6
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-5
+      - libboost-all-dev
+
+# FIXME: the following does nothing? it was used here http://genbattle.bitbucket.org/blog/2016/01/17/c++-travis-ci/
+#env: COMPILER=g++-5
+
+install:
+  - export CXX=g++-5
+  - wget https://github.com/algorithm-ninja/cotton/archive/master.zip -O temp.zip && unzip temp.zip && rm temp.zip
+  - cd cotton-master && make && sudo cp build/cotton /usr/local/bin
+  - cd ../shuriken
+  - npm install
+# FIXME: the following brutally overwrites the symlink g++ -> cc1plus which is the default (?) on ubuntu 12.04
+  - sudo ln -sf /usr/bin/g++-5 /usr/bin/g++
+
+notifications:
+  email: no
