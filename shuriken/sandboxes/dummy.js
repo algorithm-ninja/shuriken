@@ -47,6 +47,23 @@ module.exports = class Sandbox {
   }
 
   /**
+   * Deletes the sandbox. Functions of this object shouldn't be called after
+   * this
+   */
+  teardown() {
+    fse.removeSync(this._tempdir);
+  }
+
+  /**
+   * Returns the absolute path to the root directory of the sandbox.
+   *
+   * @return {string} the path to the sandbox directory
+   */
+  getRoot() {
+    return this._tempdir;
+  }
+
+  /**
    * This method takes a file path and a file name. It makes a copy of the file
    * located at the specified path, and puts the copy into the sandbox with a
    * new name.
