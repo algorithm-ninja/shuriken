@@ -2,33 +2,15 @@
   <div class="panel panel-primary">
     <div class="panel-body nopadding">
       <div class="row nomargin">
-        <div class="col-md-1 nomargin nopadding" style="background-color: rgba(0,150,136,.8); text-align: center;">
-          <i class="material-icons" style="
-              color: rgba(255,255,255,.6);
-              font-size: 45px;
-              line-height: 80px;
-              vertical-align: middle;
-              height: 80px;">
-            add_circle
-          </i>
-        </div>
-        <div class="col-md-11 nomargin padding-ns">
-          <div>
-            <textarea id="submission-data" rows="6" cols="50">
-#include <iostream>
-int main() {
-  unsigned int a, b;
-  std::cin >> a >> b;
-  std::cout << a + b << std::endl;
-}</textarea>
-          </div>
-          <div>
-            <a class="submit-submission btn btn-raised">
-              Submit
-            </a>
-          </div>
+        <div class="col-md-12 nomargin padding-ns" style="height: 300px;">
+          <div id="ace-editor-{{editorId}}" class="ace-editor">Your code here</div>
         </div>
       </div>
     </div>
+  </div>
+  <div>
+    <a class="submit-submission btn btn-raised">
+      Submit
+    </a>
   </div>
 </template>

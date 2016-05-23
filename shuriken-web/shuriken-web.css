@@ -81,3 +81,11 @@ a.task-link .list-group-item-heading {
   font-size: large;
   text-shadow: -1px 0px 1px black;
 }
+
+.ace-editor {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}

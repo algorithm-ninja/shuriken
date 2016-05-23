@@ -57,6 +57,7 @@ class DynamicSubscription {
     this._firstTime = false;
   }
 
+  /* jshint unused: false */
   run(args) {
     Tracker.nonreactive(() => {
       this._func.apply(this, arguments);
@@ -151,7 +152,7 @@ const _isLoaded = function() {
 };
 
 Template.contestPageLayout.helpers({
-  isLoaded: function() {
+  'isLoaded'() {
     return _isLoaded.apply(Template.instance());
   },
 
@@ -161,7 +162,7 @@ Template.contestPageLayout.helpers({
    *
    * @return {Boolean} True if ok, false otherwise.
    */
-  isValidContestRoute: function() {
+  'isValidContestRoute'() {
     // Warning: we have to check that _isLoaded is true, otherwise we may
     //     trigger unwanted errors. If the revision of a task changes suddenly,
     //     for example, validateObjects may be called before isLoaded, leading

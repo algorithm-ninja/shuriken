@@ -1,3 +1,3 @@
 node_modules: package.json
-	npm install
+	meteor npm install
 	touch node_modules
