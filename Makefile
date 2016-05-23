@@ -5,3 +5,5 @@ shuriken:
 
 shuriken-web:
 	$(MAKE) -C shuriken-web
+
+all: shuriken shuriken-web
