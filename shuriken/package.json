@@ -3,6 +3,7 @@
   "private": true,
   "dependencies": {
     "ava": "^0.14.0",
+    "commander": "^2.9.0",
     "cotton": "^0.2.2",
     "ddp.js": "^2.1.0",
     "fs-extra": "^0.28.0",
