@@ -46,9 +46,9 @@ module.exports = class ItalyTaskImporter {
     this._evaluatorConf = {
       timeLimit: this._yaml.time_limit,
       memoryLimit: this._yaml.memory_limit,
-      tcInputFileUriSchema: `shuriken://tasks/${this._yaml.name}/` +
+      tcInputFileUriSchema: `shuriken://tasks/${this._codename}/` +
           `${revisionDescription}/input%d.%d.txt`,
-      tcOutputFileUriSchema: `shuriken://tasks/${this._yaml.name}/` +
+      tcOutputFileUriSchema: `shuriken://tasks/${this._codename}/` +
           `${revisionDescription}/output%d.%d.txt`,
     };
 
@@ -111,8 +111,6 @@ module.exports = class ItalyTaskImporter {
    * @private
    */
   _uploadTaskData(taskRevisionId) {
-    console.log(this)_;
-
     const genData = fse.readFileSync(path.join('gen', 'GEN')).split(/\r?\n/);
 
     let subtaskIndex = 0;
@@ -163,20 +161,21 @@ module.exports = class ItalyTaskImporter {
         fileHandler.copyFromSync(path.join('output',
             `output${testcaseAbsIndex}.txt`));
 
-        // FIXME: could be 'checker.py' or 'checker.java' and so on...
+        // Import checker source file.
+        // FIXME: there could be a 'checker.py' or 'checker.sh' and so on.
         if (fse.ensureFileSync(path.join('cor', 'checker.cpp'))) {
-          // Import output file.
           // FIXME: ditto.
           fileHandler = fileDB.get('shuriken://' +
               path.join('tasks', this._codename,
               slug(this._description + taskRevisionId),
-              'checker.cpp');
+              'checker.cpp'));
 
           // FIXME: ditto.
           fileHandler.copyFromSync(path.join('output', 'checker.cpp'));
 
           this._checkerSourceUri = `shuriken://tasks/` +
-              `${this._codename}/${this._description}/checker.cpp`;
+              `${this._codename}/${slug(this._description + taskRevisionId)}/` +
+              `checker.cpp`;
         }
       }
     }
