@@ -22,8 +22,8 @@ Meteor.methods({
    *
    * @return {ObjectId}
    */
-  'taskRevisions.insert'(taskCodename, title, statementPdfUri, evaluatorConf,
-      description) {
+  'taskRevisions.insertByCodename'(taskCodename, title, statementPdfUri,
+      evaluatorConf, description) {
     should(taskCodename).be.String();
     should(title).be.String();
     should(statementPdfUri).be.String();
@@ -34,7 +34,7 @@ Meteor.methods({
     should(task.isLoaded()).be.true();
 
     return TaskRevisions.insert(new TaskRevision({
-      taskId: task._id.valueOf(),
+      taskId: task._id,
       title: title,
       statementPdfUri: statementPdfUri,
       evaluatorConf: evaluatorConf,

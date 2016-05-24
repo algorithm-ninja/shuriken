@@ -16,7 +16,8 @@ class DdpWrapper {
     this._callbacks = {};
     this._ddp = new DDP(ddpOptions);
 
-    this._ddp.on('result', (id, error, result) => {
+    this._ddp.on('result', (msg) => {
+      const id = msg.id, result = msg.result, error = msg.error;
       should(this._callbacks).have.property(id);
       this._callbacks[id](error, result);
     });
@@ -29,6 +30,34 @@ class DdpWrapper {
   method(name, params, callback) {
     const resultHandle = this._ddp.method(name, params);
     this._callbacks[resultHandle] = callback;
+  }
+
+  disconnect() {
+    this._ddp.disconnect();
+  }
+}
+
+// FIXME Move this to the right place.
+class FileHandlerWrapper {
+  constructor(destPath, fileHandler) {
+    this._destPath = destPath;
+    this._fileHandler = fileHandler;
+  }
+
+  copyFromSync(path) {
+    console.log(`[  >  ] Uploading ${this._destPath}`);
+    this._fileHandler.copyFromSync(path);
+  }
+}
+
+// FIXME Move this to the right place.
+class FileDBWrapper {
+  constructor(root) {
+    this._FileDB = new FileDB(root);
+  }
+
+  get(path) {
+    return new FileHandlerWrapper(path, this._FileDB.get(path));
   }
 }
 
@@ -77,8 +106,8 @@ module.exports = class ItalyTaskImporter {
           if (!err) {
             callback(result);
           } else {
-            console.err('[  !  ] Could not insert task.');
-            throw err;
+            console.error('[  !  ] Could not insert task.');
+            throw new Error(JSON.stringify(err));
           }
         });
   }
@@ -94,15 +123,15 @@ module.exports = class ItalyTaskImporter {
         [
           this._codename,
           this._title,
-          this._statementPdfUri,
+          'http://www.pdf995.com/samples/pdf.pdf', //FIXME
           this._evaluatorConf,
           this._description,
         ], (err, result) => {
           if (!err) {
             callback(result);
           } else {
-            console.err('[  !  ] Could not insert task.');
-            throw err;
+            console.error('[  !  ] Could not insert taskRevision.');
+            throw new Error(JSON.stringify(err));
           }
         });
   }
@@ -113,7 +142,9 @@ module.exports = class ItalyTaskImporter {
    * @private
    */
   _uploadTaskData(taskRevisionId) {
-    const genData = fse.readFileSync(path.join('gen', 'GEN')).split(/\r?\n/);
+    const genData = fse.readFileSync(path.join(this._path, 'gen', 'GEN'))
+        .toString('utf-8').split(/\r?\n/);
+    const revisionDirname = slug(`${this._description}__${taskRevisionId}`);
 
     let subtaskIndex = 0;
     let testcaseAbsIndex = -1;
@@ -136,6 +167,11 @@ module.exports = class ItalyTaskImporter {
     for (let line of genData) {
       line = line.trim();
 
+      // Ignore blank lines.
+      if (line.length === 0) {
+        continue;
+      }
+
       if (line.startsWith('#ST:')) {
         subtaskIndex += 1;
         testcaseRelIndex = 0;
@@ -143,40 +179,40 @@ module.exports = class ItalyTaskImporter {
         testcaseAbsIndex += 1;
         testcaseRelIndex += 1;
 
-        const fileDB = new FileDB(this._fileStoreRoot);
+        const fileDB = new FileDBWrapper(this._fileStoreRoot);
 
         // Import input file
         let fileHandler = fileDB.get('shuriken://' +
             path.join('tasks', this._codename,
-            slug(this._description + taskRevisionId),
+            revisionDirname,
             `input${subtaskIndex}.${testcaseRelIndex}.txt`));
 
-        fileHandler.copyFromSync(path.join('input',
+        fileHandler.copyFromSync(path.join(this._path, 'input',
             `input${testcaseAbsIndex}.txt`));
 
         // Import output file
         fileHandler = fileDB.get('shuriken://' +
             path.join('tasks', this._codename,
-            slug(this._description + taskRevisionId),
+            revisionDirname,
             `output${subtaskIndex}.${testcaseRelIndex}.txt`));
 
-        fileHandler.copyFromSync(path.join('output',
+        fileHandler.copyFromSync(path.join(this._path, 'output',
             `output${testcaseAbsIndex}.txt`));
 
         // Import checker source file.
         // FIXME: there could be a 'checker.py' or 'checker.sh' and so on.
-        if (fse.ensureFileSync(path.join('cor', 'checker.cpp'))) {
+        if (fse.ensureFileSync(path.join(this._path, 'cor', 'checker.cpp'))) {
           // FIXME: ditto.
           fileHandler = fileDB.get('shuriken://' +
               path.join('tasks', this._codename,
-              slug(this._description + taskRevisionId),
+              revisionDirname,
               'checker.cpp'));
 
           // FIXME: ditto.
-          fileHandler.copyFromSync(path.join('output', 'checker.cpp'));
+          fileHandler.copyFromSync(path.join(this._path, 'cor', 'checker.cpp'));
 
           this._checkerSourceUri = `shuriken://tasks/` +
-              `${this._codename}/${slug(this._description + taskRevisionId)}/` +
+              `${this._codename}/${revisionDirname}/` +
               `checker.cpp`;
         }
       }
@@ -189,13 +225,30 @@ module.exports = class ItalyTaskImporter {
       SocketConstructor: WebSocket,
     });
 
+    console.log(
+        `[     ] Connecting to DDP endpoint ${this._shurikenEndpoint}...`);
+
     this._ddpWrapper.onConnected(() => {
       console.log('[ DDP ] Connected');
 
-      this._insertTask(() => {
-        this._insertTaskRevision((taskRevisionId) => {
+      console.log(`[     ] Checking for task ${this._codename}`);
+      this._insertTask((taskOId) => {
+        // Workaround for EJSON.
+        const taskId = taskOId['$value'];
+
+        console.log(`[  *  ] Task has ID ${taskId}`);
+        console.log(`[     ] Inserting task revision ` +
+            `(description: ${this._description})`);
+        this._insertTaskRevision((taskRevisionOId) => {
+          // Workaround for EJSON.
+          const taskRevisionId = taskRevisionOId['$value'];
+          console.log(`[  *  ] Task revision has ID ${taskRevisionId}`);
+
+          console.log(`[     ] Uploading problem data`);
           this._uploadTaskData(taskRevisionId);
-          console.log('[=====] Import complete.');
+          console.log('[=====] Import complete, disconnecting');
+
+          this._ddpWrapper.disconnect();
         });
       });
     });
