@@ -1,10 +1,10 @@
 <template name="newSubmissionForm">
   <div class="row container">
     <div class="btn-group" role="group">
-      <button id="reset-editor" type="button" class="btn btn-raised btn-warning">
+      <button id="reset-editor" type="button" class="btn">
         <i class="material-icons">delete</i> Reset
       </button>
-      <label class="btn btn-raised btn-warning">
+      <label class="btn">
         <input id="file-selector" type="file" style="display:none">
         <i class="material-icons">file_upload</i> Load file
       </label>
@@ -20,8 +20,8 @@
     </label>
     <span class="btn-separator"></span> -->
     <div class="btn-group" role="group">
-      <div class="btn-group" role="group">
-        <button type="button" class="btn btn-info btn-raised dropdown-toggle" id="input-chooser" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+      <!-- <div class="btn-group" role="group">
+        <button type="button" class="btn btn-info dropdown-toggle" id="input-chooser" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
           <i class="material-icons">play_arrow</i> Run
           <span class="caret"></span>
         </button>
@@ -31,9 +31,9 @@
           <li role="separator" class="divider"></li>
           <li><a href="#">Custom testcase...</a></li>
         </ul>
-      </div>
-      <button id="submit-submission" type="button" class="btn btn-raised btn-success">
-        <i class="material-icons">playlist_play</i> Submit
+      </div> -->
+      <button id="submit-submission" type="button" class="btn btn-info">
+        <i class="material-icons">send</i> Submit
       </button>
     </div>
   </div>
