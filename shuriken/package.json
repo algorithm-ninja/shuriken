@@ -12,8 +12,10 @@
     "lodash": "^4.11.1",
     "mustache": "^2.2.1",
     "queue": "^4.0.0",
+    "random-words": "0.0.1",
     "should": "^8.3.1",
     "shuriken-fs": "^0.7.0",
+    "slug": "^0.9.1",
     "temp": "^0.8.3",
     "ws": "^1.1.0"
   },

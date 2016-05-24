@@ -53,9 +53,7 @@ Template.newSubmissionForm.events({
 
     const contestId = this.contestId;
     const taskId = this.taskId;
-    console.log(Template.instance().aceEditor);
     const submissionData = Template.instance().aceEditor.getValue();
-    console.log(submissionData);
 
     Meteor.call('submissions.insert', contestId, taskId, submissionData);
   },
