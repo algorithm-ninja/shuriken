@@ -74,6 +74,7 @@ module.exports = class ItalyTaskImporter {
     this._codename = this._yaml.name;
     this._title = this._yaml.title;
     this._description = revisionDescription,
+    /* jshint -W030 */
     this._evaluatorConf = {
       timeLimit: this._yaml.time_limit,
       memoryLimit: this._yaml.memory_limit,
@@ -234,14 +235,14 @@ module.exports = class ItalyTaskImporter {
       console.log(`[     ] Checking for task ${this._codename}`);
       this._insertTask((taskOId) => {
         // Workaround for EJSON.
-        const taskId = taskOId['$value'];
+        const taskId = taskOId.$value;
 
         console.log(`[  *  ] Task has ID ${taskId}`);
         console.log(`[     ] Inserting task revision ` +
             `(description: ${this._description})`);
         this._insertTaskRevision((taskRevisionOId) => {
           // Workaround for EJSON.
-          const taskRevisionId = taskRevisionOId['$value'];
+          const taskRevisionId = taskRevisionOId.$value;
           console.log(`[  *  ] Task revision has ID ${taskRevisionId}`);
 
           console.log(`[     ] Uploading problem data`);
