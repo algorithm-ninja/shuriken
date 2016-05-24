@@ -2,6 +2,7 @@
 
 const FileDB = require('shuriken-fs');
 
+const DDP = require('ddp.js').default;
 const fse = require('fs-extra');
 const yaml = require('js-yaml');
 const path = require('path');
@@ -9,6 +10,27 @@ const should = require('should');
 const slug = require('slug');
 const WebSocket = require('ws');
 
+
+class DdpWrapper {
+  constructor(ddpOptions) {
+    this._callbacks = {};
+    this._ddp = new DDP(ddpOptions);
+
+    this._ddp.on('result', (id, error, result) => {
+      should(this._callbacks).have.property(id);
+      this._callbacks[id](error, result);
+    });
+  }
+
+  onConnected(callback) {
+    this._ddp.on('connected', callback);
+  }
+
+  method(name, params, callback) {
+    const resultHandle = this._ddp.method(name, params);
+    this._callbacks[resultHandle] = callback;
+  }
+}
 
 module.exports = class ItalyTaskImporter {
   constructor(packagePath, fileStoreRoot, revisionDescription) {
@@ -48,6 +70,15 @@ module.exports = class ItalyTaskImporter {
    * @returns {String} ObjectId.valueOf()
    */
   _insertTask(callback) {
+    this._ddpWrapper.method('tasks.insertIfNotExisting', [this._codename],
+        (err, result) => {
+          if (!err) {
+            callback(result);
+          } else {
+            console.err('[  !  ] Could not insert task.');
+            throw err;
+          }
+        });
   }
 
   /**
@@ -57,6 +88,21 @@ module.exports = class ItalyTaskImporter {
    * @returns {String} ObjectId.valueOf()
    */
   _insertTaskRevision(callback) {
+    this._ddpWrapper.method('taskRevisions.insertByCodename',
+        [
+          this._codename,
+          this._title,
+          this._statementPdfUri,
+          this._evaluatorConf,
+          this._description,
+        ], (err, result) => {
+          if (!err) {
+            callback(result);
+          } else {
+            console.err('[  !  ] Could not insert task.');
+            throw err;
+          }
+        });
   }
 
   /**
@@ -137,5 +183,20 @@ module.exports = class ItalyTaskImporter {
   }
 
   run() {
+    this._ddpWrapper = new DdpWrapper({
+      endpoint: this._shurikenAddress,
+      SocketConstructor: WebSocket,
+    });
+
+    this._ddpWrapper.onConnected(() => {
+      console.log('[ DDP ] Connected');
+
+      this._insertTask(() => {
+        this._insertTaskRevision((taskRevisionId) => {
+          this._uploadTaskData(taskRevisionId);
+          console.log('[=====] Import complete.');
+        });
+      });
+    });
   }
 };

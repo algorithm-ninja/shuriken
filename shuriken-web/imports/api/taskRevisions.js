@@ -17,7 +17,12 @@ if (Meteor.isServer) {
    * @param {!ObjectId} taskRevisionId The task revision ObjectId.
    */
   Meteor.publish('TaskRevisionById', function(taskRevisionId) {
-    return TaskRevisions.find({_id: taskRevisionId}, {limit: 1});
+    return TaskRevisions.find({_id: taskRevisionId}, {
+      limit: 1,
+      fields: {
+        description: false,
+      },
+    });
   });
 }
 

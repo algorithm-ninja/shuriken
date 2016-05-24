@@ -35,10 +35,12 @@ should.Assertion.add('ObjectId', function() {
  * |                         | clients and therefore must be       |           |
  * |                         | reachable from them.                |           |
  * +-------------------------+-------------------------------------+-----------+
- * | evaluatorConf           | An object representing the conf to  |     N     |
+ * | evaluatorConf           | An object representing the conf to  |     Y     |
  * |                         | be dispatched to the evaluators     |           |
  * |                         | when an evalation of this revision  |           |
  * |                         | is requested.                       |           |
+ * +-------------------------+-------------------------------------+-----------+
+ * | description             | Human readable description.         |     N     |
  * +-------------------------+-------------------------------------+-----------+
  *
  */
@@ -75,8 +77,9 @@ export class TaskRevision {
     should(json.taskId).be.ObjectId();
     should(json.title).be.String();
     should(json.statementPdfUri).be.String();
-    if (_.isNull(json.evaluatorConf)) {
-      should(json.evaluatorConf).be.Object();
+    should(json.evaluatorConf).be.Object();
+    if (!_.isNil(json.description)) {
+      should(json.description).be.String();
     }
 
     if (_.has(json, '_id')) {
@@ -86,6 +89,7 @@ export class TaskRevision {
     this.title = json.title;
     this.statementPdfUri = json.statementPdfUri;
     this.evaluatorConf = json.evaluatorConf;
+    this.description = json.description;
 
     this._loaded = _.has(json, '_id');
   }
@@ -101,6 +105,7 @@ export class TaskRevision {
       title: this.title,
       statementPdfUri: this.statementPdfUri,
       evaluatorConf: this.evaluatorConf,
+      description: this.description,
     };
   }
 
