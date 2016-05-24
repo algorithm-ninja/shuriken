@@ -28,16 +28,16 @@ Template.newSubmissionForm.onCreated(function() {
 
 Template.newSubmissionForm.onRendered(function() {
   const taskId = Template.currentData().taskId.valueOf();
-  const editor = ace.edit(`ace-editor-${taskId}`);
-  editor.setTheme('ace/theme/xcode');
-  editor.getSession().setMode('ace/mode/c_cpp');
-  editor.setValue(`#include <iostream>
+  Template.instance().aceEditor = ace.edit(`ace-editor-${taskId}`);
+  Template.instance().aceEditor.setTheme('ace/theme/xcode');
+  Template.instance().aceEditor.getSession().setMode('ace/mode/c_cpp');
+  Template.instance().aceEditor.setValue(`#include <iostream>
 int main() {
   unsigned int a, b;
   std::cin >> a >> b;
   std::cout << a + b << std::endl;
 }`);
-  editor.clearSelection();
+  Template.instance().aceEditor.clearSelection();
 });
 
 Template.newSubmissionForm.helpers({
@@ -47,14 +47,48 @@ Template.newSubmissionForm.helpers({
 });
 
 Template.newSubmissionForm.events({
-  'click .submit-submission'(event) {
+  'click #submit-submission'(event) {
     // Prevent default browser form submit
     event.preventDefault();
 
     const contestId = this.contestId;
     const taskId = this.taskId;
-    const submissionData = document.getElementById('submission-data').value;
+    console.log(Template.instance().aceEditor);
+    const submissionData = Template.instance().aceEditor.getValue();
+    console.log(submissionData);
 
     Meteor.call('submissions.insert', contestId, taskId, submissionData);
+  },
+
+  'click #reset-editor'(event) {
+    Template.instance().aceEditor.setValue(`#include <iostream>
+int main() {
+  unsigned int a, b;
+  std::cin >> a >> b;
+  std::cout << a + b << std::endl;
+}`);
+    Template.instance().aceEditor.clearSelection();
+  },
+
+  'change #file-selector'(event) {
+    const reader = new FileReader();
+
+    // FIXME: is a closure really needed?
+    reader.onload = function(editor) {
+      return function(e) {
+        editor.setValue(e.target.result);
+        editor.clearSelection();
+      };
+    }(Template.instance().aceEditor);
+
+    reader.readAsText(event.target.files[0]);
+  },
+
+  'click #file-selector'(event) {
+    // FIXME: this hack is needed to have a 'change' event fire even if the same
+    //        file is selected twice (e.g. you select, then click "reset", then
+    //        select again) however it does not seem to work at the moment (the
+    //        'click' event is fired before 'change')
+    // event.target.value = null;
   },
 });

@@ -1,4 +1,29 @@
 <template name="newSubmissionForm">
+  <div class="row container">
+    <div class="btn-group" role="group">
+      <button id="reset-editor" type="button" class="btn btn-raised">
+        <i class="fa fa-trash"></i> Reset
+      </button>
+      <label class="btn btn-raised">
+        <input id="file-selector" type="file" style="display:none">
+        <i class="fa fa-folder-open"></i> Load file
+      </label>
+    </div>
+    <!-- <span class="btn-separator"></span>
+    <label>
+      Language:
+      <select>
+        <option label="C" value="C">C</option>
+        <option label="C++" value="C++" selected="selected">C++</option>
+        <option label="Pascal" value="Pascal">Pascal</option>
+      </select>
+    </label>
+    <span class="btn-separator"></span> -->
+    <button id="submit-submission" type="button" class="btn btn-raised">
+      <i class="fa fa-send"></i> Submit
+    </button>
+  </div>
+
   <div class="panel panel-primary">
     <div class="panel-body nopadding">
       <div class="row nomargin">
@@ -7,10 +32,5 @@
         </div>
       </div>
     </div>
-  </div>
-  <div>
-    <a class="submit-submission btn btn-raised">
-      Submit
-    </a>
   </div>
 </template>
