@@ -28,6 +28,7 @@ Template.newSubmissionForm.onCreated(function() {
 
 Template.newSubmissionForm.onRendered(function() {
   const taskId = Template.currentData().taskId.valueOf();
+  /* jshint -W117 */
   Template.instance().aceEditor = ace.edit(`ace-editor-${taskId}`);
   Template.instance().aceEditor.setTheme('ace/theme/xcode');
   Template.instance().aceEditor.getSession().setMode('ace/mode/c_cpp');
@@ -58,7 +59,7 @@ Template.newSubmissionForm.events({
     Meteor.call('submissions.insert', contestId, taskId, submissionData);
   },
 
-  'click #reset-editor'(event) {
+  'click #reset-editor'() {
     Template.instance().aceEditor.setValue(`#include <iostream>
 int main() {
   unsigned int a, b;
@@ -68,7 +69,7 @@ int main() {
     Template.instance().aceEditor.clearSelection();
   },
 
-  'change #file-selector'(event) {
+  'change #file-selector'() {
     const reader = new FileReader();
 
     // FIXME: is a closure really needed?
