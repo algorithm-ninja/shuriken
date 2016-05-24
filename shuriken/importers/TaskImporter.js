@@ -14,6 +14,8 @@ if (!module.parent) {
     .option('--fs-root [path]', 'Root of the network file system.')
     .option('--description [description]', 'A human-readable string.',
         randomWords({ exactly: 2, join: '-' }))
+    .option('--shuriken [address]', 'shuriken-web websocket endpoint',
+        'ws://localhost:3000/websocket')
     .parse(process.argv);
 
   if (_.isNil(program.fsRoot)) {
@@ -21,5 +23,6 @@ if (!module.parent) {
   }
 
   should(program.args).have.lengthOf(1);
-  new TaskImporter(program.args[0], program.fsRoot, program.description).run();
+  new TaskImporter(program.args[0], program.fsRoot, program.shuriken,
+      program.description).run();
 }

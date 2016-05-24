@@ -33,9 +33,11 @@ class DdpWrapper {
 }
 
 module.exports = class ItalyTaskImporter {
-  constructor(packagePath, fileStoreRoot, revisionDescription) {
+  constructor(packagePath, fileStoreRoot, shurikenEndpoint,
+        revisionDescription) {
     this._path = packagePath;
     this._fileStoreRoot = fileStoreRoot;
+    this._shurikenEndpoint = shurikenEndpoint;
     this._yaml = yaml.safeLoad(fse.readFileSync(
         path.join(this._path, 'task.yaml'), 'utf8'));
 
@@ -183,7 +185,7 @@ module.exports = class ItalyTaskImporter {
 
   run() {
     this._ddpWrapper = new DdpWrapper({
-      endpoint: this._shurikenAddress,
+      endpoint: this._shurikenEndpoint,
       SocketConstructor: WebSocket,
     });
 

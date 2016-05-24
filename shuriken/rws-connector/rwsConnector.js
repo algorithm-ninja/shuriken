@@ -8,17 +8,17 @@ const url = require('url');
 const ContestDataSubscriber = require('./contestDataSubscriber.js');
 
 class RwsConnector {
-  constructor(contestCodename, shurikenAddress, rwsAddress) {
+  constructor(contestCodename, shurikenEndpoint, rwsAddress) {
     let self = this;
 
     this._contestCodename = contestCodename;
-    this._shurikenAddress = shurikenAddress;
+    this._shurikenEndpoint = shurikenEndpoint;
     this._rwsAddress = rwsAddress;
     this._throttledOnDataChange =
         _.throttle(this._onDataChange, 250, {trailing: true});
 
     this._contestDataSubscriber = new ContestDataSubscriber(
-        contestCodename, shurikenAddress, function() {
+        contestCodename, shurikenEndpoint, function() {
       if (this.ready()) {
         self._throttledOnDataChange();
       }
@@ -336,13 +336,13 @@ if (!module.parent) {
 
   program
     .version('0.0.1')
-    .option('--shuriken [address]', 'Address to shuriken-web',
-            'ws://localhost:3000/websocket')
+    .option('--shuriken [address]', 'shuriken-web websocket endpoint',
+        'ws://localhost:3000/websocket')
     .option('--rws [address]', 'Address to rws', 'http://localhost:8890')
     .option('--contest [codename]', 'Contest codename')
     .parse(process.argv);
 
-  const shurikenAddress = program.shuriken;
+  const shurikenEndpoint = program.shuriken;
   const rwsAddress = program.rws;
   const contestCodename = program.contest;
 
@@ -350,5 +350,5 @@ if (!module.parent) {
     throw new Error('Use --contest');
   }
 
-  new RwsConnector(contestCodename, shurikenAddress, rwsAddress);
+  new RwsConnector(contestCodename, shurikenEndpoint, rwsAddress);
 }
