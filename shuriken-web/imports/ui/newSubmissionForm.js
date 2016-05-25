@@ -76,6 +76,11 @@ Template.newSubmissionForm.events({
   },
 
   'click #reset-editor'(event) {
+    // FIXME: do this with a bootstrap dialog?
+    if (!confirm('Your code will be deleted, do you want to proceed?')) {
+      return;
+    }
+
     const taskId = Template.currentData().taskId.valueOf();
     localStorage.setItem(`ace-editor-${taskId}`, `#include <iostream>
 int main() {
