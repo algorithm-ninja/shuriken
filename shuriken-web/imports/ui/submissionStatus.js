@@ -246,7 +246,7 @@ Template.submissionStatus.helpers({
         case 'inactive':
           return '#7f7f7f';
         case 'active':
-          return evaluation.isLost ? '#7f7f7f' : '#03a9f4';
+          return '#03a9f4';
         case 'failed':
           return '#7f7f7f';
         case 'complete':

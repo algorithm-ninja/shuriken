@@ -7,7 +7,7 @@
               <i class="material-icons" style="font-size: 20px; vertical-align: top;">
                 {{headingIcon}}
               </i>
-              {{humanState}}
+              {{humanState}} {{#if isLost}}[LOST]{{/if}}
             </span>
             <span class="pull-right">{{humanEvaluationDateTime}}</span>
           {{else}}

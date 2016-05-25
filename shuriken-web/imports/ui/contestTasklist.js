@@ -4,6 +4,7 @@ import {Template} from 'meteor/templating';
 
 // APIs and collections.
 import {ContestTasks} from '../api/contestTasks.js';
+import {Counts} from '../api/counts.js';
 import {Submissions} from '../api/submissions.js';
 import {Tasks} from '../api/tasks.js';
 import {TaskRevisions} from '../api/taskRevisions.js';
@@ -38,8 +39,9 @@ Template.tasklistTask.onCreated(function() {
 
   const contestId = context.contestId;
   const taskId = context.taskId;
-  //FIXME subscribe to a counter, not the whole collection!
-  this.subscribe('SubmissionsForCurrentParticipationAndTask', contestId, taskId);
+
+  this.subscribe('SubmissionsForCurrentParticipationAndTaskCounter', contestId,
+      taskId);
 });
 
 Template.contestTasklist.helpers({
@@ -75,10 +77,15 @@ Template.contestTasklist.helpers({
 
 Template.tasklistTask.helpers({
   'submissionCount'() {
-    return Submissions.find({
-      userId: Meteor.userId(),
-      contestId: this.contestId,
-      taskId: this.taskId,
-    }).count();
+    const counterName = `submission_counter_${this.contestId.valueOf()}_` +
+        `${this.taskId.valueOf()}`;
+
+    const count = Counts.findOne({_id: counterName});
+    if (_.isNil(count)) {
+      return '?';
+    } else {
+      should(count).have.property('count');
+      return count.count;
+    }
   }
 });
