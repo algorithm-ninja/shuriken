@@ -13,6 +13,14 @@ module.exports = class DynamicSubscription {
     this._firstTime = true;
   }
 
+  reset() {
+    _.each(this._activeSubscriptions, (sub) => {
+      this._unsub(sub);
+    });
+    this._subscriptionBuffer = {};
+    this._activeSubscriptions = {};
+  }
+
   subscribe(name, args) {
     const key = _.join([name, JSON.stringify(args)], '__');
     if (_.has(this._subscriptionBuffer, key)) {

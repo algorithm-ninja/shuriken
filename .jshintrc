@@ -76,6 +76,8 @@
       //"_": false,              // Underscore.js
       "$": false,                // jQuery
       "Router": false,           // iron-router
-      "Roles": false
+      "Roles": false,
+      "localStorage": false,
+      "FileReader": false
     }
 }

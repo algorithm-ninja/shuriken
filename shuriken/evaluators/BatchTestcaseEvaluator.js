@@ -291,10 +291,14 @@ class BatchTestcaseEvaluator {
    * @private
    */
   _copy(sourceRelativePath, destinationAbsolutePath) {
-    this._fileDB.get(sourceRelativePath)
-        .copyToSync(destinationAbsolutePath, (err) => {
-      should(err).not.be.ok(`Can't write to file: ${destinationAbsolutePath}`);
-    });
+    try {
+      this._fileDB.get(sourceRelativePath).copyToSync(destinationAbsolutePath);
+    } catch (err) {
+      // FIXME Temporary fix until we finally have proper error handling inside
+      //       shuriken-fs.
+      throw new Error(`Can't copy file ${sourceRelativePath} to file ` +
+          `${destinationAbsolutePath} (error ${err})`);
+    }
   }
 
   /**

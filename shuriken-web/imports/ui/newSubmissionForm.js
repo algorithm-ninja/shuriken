@@ -2,10 +2,12 @@
 
 // UI fragments.
 import './newSubmissionForm.html';
-// Client-side imports.
-import 'ace-builds/src-noconflict/ace.js';
-import 'ace-builds/src-noconflict/theme-xcode.js';
-import 'ace-builds/src-noconflict/mode-c_cpp.js';
+// Requires.
+const bootbox = require('bootbox');
+// Browser JS imports.
+import 'ace-builds/src-min-noconflict/ace.js';
+import 'ace-builds/src-min-noconflict/theme-xcode.js';
+import 'ace-builds/src-min-noconflict/mode-c_cpp.js';
 
 /**
  * #### Context
@@ -30,6 +32,7 @@ Template.newSubmissionForm.onRendered(function() {
   const taskId = Template.currentData().taskId.valueOf();
   /* jshint -W117 */
   Template.instance().aceEditor = ace.edit(`ace-editor-${taskId}`);
+  Template.instance().aceEditor.$blockScrolling = Infinity;
 
   // Restore old code, or set the default one.
   if (localStorage.getItem(`ace-editor-${taskId}`)) {
@@ -76,23 +79,33 @@ Template.newSubmissionForm.events({
         submissionData);
   },
 
-  'click #reset-editor'(event) {
-    // FIXME: do this with a bootstrap dialog?
-    if (!confirm('Your code will be deleted, do you want to proceed?')) {
-      return;
-    }
-
+  'click #reset-editor'() {
+    const aceEditor = Template.instance().aceEditor;
     const taskId = Template.currentData().taskId.valueOf();
-    localStorage.setItem(`ace-editor-${taskId}`, `#include <iostream>
-int main() {
-  unsigned int a, b;
-  std::cin >> a >> b;
-  std::cout << a + b << std::endl;
-}`);
 
-    Template.instance().aceEditor.setValue(
-        localStorage.getItem(`ace-editor-${taskId}`));
-    Template.instance().aceEditor.clearSelection();
+    bootbox.dialog({
+      title: 'Warning',
+      message: 'Your code will be deleted, do you want to proceed?',
+      backdrop: true,
+      onEscape: true,
+      buttons: {
+        cancel: {
+          label: 'No, cancel',
+          callback: () => {},
+        },
+
+        reset: {
+          label: 'Yes, reset',
+          callback: () => {
+            localStorage.setItem(`ace-editor-${taskId}`,
+                '// Write your code here.\n');
+
+            aceEditor.setValue(localStorage.getItem(`ace-editor-${taskId}`));
+            aceEditor.clearSelection();
+          },
+        },
+      },
+    });
   },
 
   'change #file-selector'(event) {

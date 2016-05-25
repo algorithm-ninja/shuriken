@@ -173,7 +173,7 @@ module.exports = class ItalyTaskImporter {
    * @private
    */
   _uploadTaskData(taskRevisionId) {
-    const revisionDirname = slug(`${this._description}__${taskRevisionId}`);
+    const revisionDirname = slug(`${this._description}`);
 
     let subtaskIndex = 0;
     let testcaseAbsIndex = -1;

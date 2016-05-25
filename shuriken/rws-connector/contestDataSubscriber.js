@@ -62,6 +62,7 @@ module.exports = class ContestDataSubscriber {
 
     this._ddp.on('connected', () => {
       console.log('[ DDP ] DDP connected.');
+      this._resetAllSubscriptions();
       this._updateSubscriptions();
 
       console.log(`[ DDP ] Logging in`);
@@ -153,6 +154,16 @@ module.exports = class ContestDataSubscriber {
         this.subscribe('LiveEvaluationsForTaskRevisionId', taskRevisionId);
       });
     }, subscribe, unsubscribe, isReady);
+  }
+
+  _resetAllSubscriptions() {
+    this._usersSub.reset();
+    this._contestSub.reset();
+    this._contestTasksSub.reset();
+    this._taskRevisionsSub.reset();
+    this._tasksSub.reset();
+    this._submissionsSub.reset();
+    this._evaluationsSub.reset();
   }
 
   _updateSubscriptions() {

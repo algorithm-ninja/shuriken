@@ -7,8 +7,10 @@ import {Template} from 'meteor/templating';
 // UI fragments.
 import './submissionStatus.html';
 // Requires.
-const moment = require('moment');
 const _ = require('lodash');
+const bootbox = require('bootbox');
+const he = require('he');
+const moment = require('moment');
 const should = require('should/as-function');
 
 /**
@@ -272,11 +274,21 @@ Template.submissionStatus.events({
     should(event.currentTarget.dataset.submissionId).be.String();
     const submissionId = new Meteor.Collection.ObjectID(
         event.currentTarget.dataset.submissionId);
-    Meteor.call('submissions.submissionFileForSubmissionId', submissionId, function(err, data) {
+    Meteor.call('submissions.submissionFileForSubmissionId', submissionId,
+        function(err, data) {
       if (!err) {
-        alert(data);
+        bootbox.alert({
+          title: 'Source code for submission',
+          size: 'large',
+          message: `<pre style="max-height: 600px;">${he.escape(data)}</pre>`,
+          backdrop: true,
+        });
       } else {
-        alert(err);
+        bootbox.alert({
+          title: 'Error',
+          message: `<pre style="max-height: 600px;">${he.escape(err)}</pre>`,
+          backdrop: true,
+        });
       }
     });
   }
