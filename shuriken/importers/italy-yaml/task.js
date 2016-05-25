@@ -1,14 +1,14 @@
 'use strict';
 
-const FileDB = require('shuriken-fs');
-
+const _ = require('lodash');
 const DDP = require('ddp.js').default;
+const FileDB = require('shuriken-fs');
+const WebSocket = require('ws');
 const fse = require('fs-extra');
 const yaml = require('js-yaml');
 const path = require('path');
 const should = require('should');
 const slug = require('slug');
-const WebSocket = require('ws');
 
 
 class DdpWrapper {
@@ -82,10 +82,40 @@ module.exports = class ItalyTaskImporter {
           `${revisionDescription}/input%d.%d.txt`,
       tcOutputFileUriSchema: `shuriken://tasks/${this._codename}/` +
           `${revisionDescription}/output%d.%d.txt`,
+      evaluationStructure: [],
     };
 
-    if (fse.readFileSync(path.join(this._path, 'gen', 'GEN'))
-        .indexOf('#ST') !== -1) {
+    // Parse 'gen/GEN' to construct this._evaluatorConf.evaluationStructure.
+    const genData = fse.readFileSync(path.join(this._path, 'gen', 'GEN'))
+        .toString('utf-8');
+    const thereAreSubtasks = (genData.indexOf('#ST:') !== -1);
+
+    if (!thereAreSubtasks) {
+      this._evaluatorConf.evaluationStructure.push({
+        nTestcases: 0
+      });
+    }
+
+    for (let line of genData.split(/\r?\n/)) {
+      line = line.trim();
+
+      // Ignore blank lines.
+      if (line.length === 0) {
+        continue;
+      }
+
+      if (line.startsWith('#ST:')) {
+        console.log(this._evaluatorConf.evaluationStructure.length);
+        this._evaluatorConf.evaluationStructure.push({
+          subtaskValue: parseInt(line.substr(4)),
+          nTestcases: 0
+        });
+      } else if (!line.startsWith('#') || line.startsWith('#COPY:')) {
+        _.last(this._evaluatorConf.evaluationStructure).nTestcases += 1;
+      }
+    }
+
+    if (thereAreSubtasks) {
       this._evaluatorConf.intraSubtaskAggregation = 'min';
       this._evaluatorConf.interSubtaskAggregation = 'sum';
     } else {
@@ -143,42 +173,18 @@ module.exports = class ItalyTaskImporter {
    * @private
    */
   _uploadTaskData(taskRevisionId) {
-    const genData = fse.readFileSync(path.join(this._path, 'gen', 'GEN'))
-        .toString('utf-8').split(/\r?\n/);
     const revisionDirname = slug(`${this._description}__${taskRevisionId}`);
 
     let subtaskIndex = 0;
     let testcaseAbsIndex = -1;
-    let testcaseRelIndex = 0;
 
-    let thereAreSubtask = false;
+    for (let subtask of this._evaluatorConf.evaluationStructure) {
+      subtaskIndex += 1;
 
-    for (let line of genData) {
-      line = line.trim();
-
-      if (line.startsWith('#ST:')) {
-        thereAreSubtask = true;
-      }
-    }
-
-    if (!thereAreSubtask) {
-      subtaskIndex = 1;
-    }
-
-    for (let line of genData) {
-      line = line.trim();
-
-      // Ignore blank lines.
-      if (line.length === 0) {
-        continue;
-      }
-
-      if (line.startsWith('#ST:')) {
-        subtaskIndex += 1;
-        testcaseRelIndex = 0;
-      } else if (!line.startsWith('#') || line.startsWith('#COPY:')) {
+      for (let testcaseRelIndex = 1; testcaseRelIndex <= subtask.nTestcases;
+          testcaseRelIndex++) {
+        // Move to the next testcase
         testcaseAbsIndex += 1;
-        testcaseRelIndex += 1;
 
         const fileDB = new FileDBWrapper(this._fileStoreRoot);
 

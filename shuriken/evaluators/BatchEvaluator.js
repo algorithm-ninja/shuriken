@@ -135,6 +135,13 @@ const util = require('util');
  * |                         | will yield a score of 15 instead of |           |
  * |                         | the normal score of 10).            |           |
  * +-------------------------+-------------------------------------+-----------+
+ * | subtaskValue            | A value that overrides the normal   |     N     |
+ * |                         | subtask score (e.g. if the subtask  |           |
+ * |                         | has 10 TCs and the subtaskValue is  |           |
+ * |                         | 37, then solving all 10 TCs will    |           |
+ * |                         | yield a score of 37 instead of the  |           |
+ * |                         | normal score of 10).                |           |
+ * +-------------------------+-------------------------------------+-----------+
  *
  * #### Published result
  *
@@ -239,6 +246,11 @@ class BatchEvaluator {
           .be.Number()
           .and.not.be.Infinity()
           .and.be.above(0);
+
+      if (_.has(subtask, 'subtaskValue')) {
+        should(subtask).not.have.property('scoreMultiplier', `You can't ` +
+            `specify scoreMultiplier and subtaskValue.`);
+      }
 
       subtask.scoreMultiplier = _.get(subtask, 'scoreMultiplier', 1.0);
 
@@ -462,6 +474,20 @@ class BatchEvaluator {
           this._config.evaluationStructure[subtaskIndex - 1].scoreMultiplier;
       maxSubtaskScore *=
           this._config.evaluationStructure[subtaskIndex - 1].scoreMultiplier;
+
+      const subtaskValue =
+          this._config.evaluationStructure[subtaskIndex - 1].subtaskValue;
+
+      if (subtaskValue) {
+        if (maxSubtaskScore > 0) {
+          subtaskScore *= subtaskValue / maxSubtaskScore;
+        } else {
+          console.warn(`The maxSubtaskScore value is 0, subtaskScore = ` +
+              `${subtaskScore}, subtaskValue = ${subtaskValue}.`);
+          subtaskScore = 0;
+        }
+        maxSubtaskScore = subtaskValue;
+      }
 
       if (subtaskIndex === 1) {
         score = subtaskScore;
