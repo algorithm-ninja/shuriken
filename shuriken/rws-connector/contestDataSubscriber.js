@@ -63,10 +63,35 @@ module.exports = class ContestDataSubscriber {
     this._ddp.on('connected', () => {
       console.log('[ DDP ] DDP connected.');
       this._updateSubscriptions();
+
+      console.log(`[ DDP ] Logging in`);
+      const loginParameters = {
+          user: {username: 'contest-observer'},
+          password: 'secret'
+      };
+      this._ddp.method('login', [loginParameters]);
+    });
+
+    this._ddp.on('result', message => {
+      const id = message.id;
+      const error = message.error;
+      const result = message.result;
+
+      if (!error) {
+        console.log(`[ DDP ] Logged in!`);
+      }
     });
 
     this._ddp.on('disconnected', () => {
       console.log('[ DDP ] DDP disconnected.');
+    });
+
+    this._ddp.on('nosub', message => {
+      const id = message.id;
+      const error = message.error;
+
+      console.log(`[  E  ] Subscription ID ${id} failed:`);
+      console.log(JSON.stringify(error, null, 2));
     });
 
     const subscribe = (name, params) => {

@@ -72,7 +72,8 @@ Template.newSubmissionForm.events({
     const taskId = this.taskId;
     const submissionData = Template.instance().aceEditor.getValue();
 
-    Meteor.call('submissions.insert', contestId, taskId, submissionData);
+    Meteor.call('submissions.insertForCurrentUser', contestId, taskId,
+        submissionData);
   },
 
   'click #reset-editor'(event) {

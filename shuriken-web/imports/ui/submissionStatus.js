@@ -265,3 +265,19 @@ Template.submissionStatus.helpers({
     }
   },
 });
+
+Template.submissionStatus.events({
+  'click .shuriken-show-submission-file'(event) {
+    event.preventDefault();
+    should(event.currentTarget.dataset.submissionId).be.String();
+    const submissionId = new Meteor.Collection.ObjectID(
+        event.currentTarget.dataset.submissionId);
+    Meteor.call('submissions.submissionFileForSubmissionId', submissionId, function(err, data) {
+      if (!err) {
+        alert(data);
+      } else {
+        alert(err);
+      }
+    });
+  }
+});

@@ -45,7 +45,7 @@ Template.taskSubmissionsPage.onCreated(function() {
     if (isValidTaskRoute(context)) {
       const routeTask = getRouteTask(context);
       self.subscriptionStatus =
-          self.subscribe('SubmissionsForUserAndContestAndTask',
+          self.subscribe('SubmissionsForCurrentParticipationAndTask',
               routeContest._id, routeTask._id);
     }
   });
@@ -108,7 +108,7 @@ Template.taskSubmissionsPage.helpers({
   },
 
   /**
-   * Returns true if the SubmissionsForUserAndContestAndTask subscription is
+   * Returns true if the SubmissionsForCurrentParticipationAndTask subscription is
    * ready.
    *
    * @return {Boolean} True if ready, false otherwise.

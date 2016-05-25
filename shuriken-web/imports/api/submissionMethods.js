@@ -80,7 +80,31 @@ const _addSubmission = function(submissionId, userId, contest, task,
 };
 
 Meteor.methods({
-  'submissions.insert'(contestId, taskId, submissionData) {
+  /**
+   * Creates a new submission for the (current user, contest, task) tuple. The
+   * submission data is uploaded to the file-store and the path of the file
+   * is written in the newly-created document.
+   *
+   * This method automatically enqueues an evaluation.
+   *
+   * @throws {403} If the user is not logged in.
+   * @throws {403} If the current user is not a contestant.
+   * @throws {404} If the contest is not found.
+   * @throws {404} If the task is not found.
+   * @throws {400} If the task is found, but does not belong to the contest.
+   * @throws {500} If the given task does not have a valid revision.
+   * @param {ObjectId} contestId
+   * @param {ObjectId} taskId
+   * @param {String} submissionData
+   */
+  'submissions.insertForCurrentUser'(contestId, taskId, submissionData) {
+    if (!this.userId) {
+      throw new Meteor.Error(403, 'User must be logged in.');
+    }
+    if (!Roles.userIsInRole(this.userId, 'contestant')) {
+      throw new Meteor.Error(403, 'User is not a contestant');
+    }
+
     // Record submission time (as early as possible)
     const submissionTime = new Date();
     const formattedSubmissionTime =
@@ -96,23 +120,37 @@ Meteor.methods({
     should(user).be.ok().and.have.property('username');
 
     const contest = Contests.findOne({_id: contestId});
+    if (_.isNil(contest)) {
+      throw Meteor.Error(404, 'Contest not found.');
+    }
     should(contest.isLoaded()).be.true();
 
     const task = Tasks.findOne({_id: taskId});
+    if (_.isNil(contest)) {
+      throw Meteor.Error(404, 'Task not found.');
+    }
     should(task.isLoaded()).be.true();
 
     const contestTasks = ContestTasks.find({contestId: contestId});
     const contestTaskForTaskId = _.find(contestTasks.fetch(), (contestTask) => {
-      const taskRevision =
-          TaskRevisions.findOne({_id: contestTask.taskRevisionId});
+      const taskRevision = TaskRevisions.findOne({
+        _id: contestTask.taskRevisionId
+      });
       should(taskRevision.isLoaded()).be.true();
 
       return taskRevision.taskId.valueOf() === taskId.valueOf();
     });
+    if (_.isNil(contestTaskForTaskId)) {
+      throw Meteor.Error(400, 'Task not found in given contest.');
+    }
     should(contestTaskForTaskId.isLoaded()).be.true();
 
     const taskRevision = TaskRevisions.findOne({
-        _id: contestTaskForTaskId.taskRevisionId});
+      _id: contestTaskForTaskId.taskRevisionId
+    });
+    if (_.isNil(taskRevision)) {
+      throw Meteor.Error(500, 'No task revision found for given task.');
+    }
     should(taskRevision.isLoaded()).be.true();
 
     // Save the data to a new file (in the filesystem) and create a submission
@@ -133,4 +171,36 @@ Meteor.methods({
           submissionFileUri, submissionTime.getTime());
     }));
   },
+
+  /**
+   * Returns the content of the submissionFile for the given submissios id.
+   *
+   * @throws {404} If the id is not found in the collection.
+   * @throws {403} If the current user is not a contestant.
+   * @throws {403} If the submission does not belong to the current user.
+   *
+   * @param {ObjectId} submissionId The unique object if for the submission.
+   * @return {String} raw file content.
+   */
+  'submissions.submissionFileForSubmissionId'(submissionId) {
+    if (!this.userId) {
+      throw new Meteor.Error(403, 'User must be logged in.');
+    }
+    if (!Roles.userIsInRole(this.userId, 'contestant') &&
+        !Roles.userIsInRole(this.userId, 'contest-observer')) {
+      throw new Meteor.Error(403, 'User is not a contestant nor a ' +
+          'contest-observer');
+    }
+
+    const submission = Submissions.findOne({_id: submissionId});
+    if (_.isNil(submission)) {
+      throw new Meteor.Error(404, 'Submission not found.');
+    }
+    should(submission.isLoaded()).be.true();
+
+    const submissionFileUri = submission.submissionFileUri;
+    const fileHandle = new FileDB(Meteor.settings.fileStoreRoot)
+        .get(submissionFileUri);
+    return fileHandle.readSync();
+  }
 });

@@ -39,7 +39,7 @@ Template.tasklistTask.onCreated(function() {
   const contestId = context.contestId;
   const taskId = context.taskId;
   //FIXME subscribe to a counter, not the whole collection!
-  this.subscribe('SubmissionsForUserAndContestAndTask', contestId, taskId);
+  this.subscribe('SubmissionsForCurrentParticipationAndTask', contestId, taskId);
 });
 
 Template.contestTasklist.helpers({

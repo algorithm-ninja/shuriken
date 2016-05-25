@@ -10,6 +10,9 @@ import '../imports/api/taskRevisions.js';
 import '../imports/api/taskMethods.js';
 import '../imports/api/tasks.js';
 import '../imports/api/users.js';
+import '../imports/startup/accounts-config.js';
+import '../imports/startup/parse-settings.js';
+
 
 import {EvaluationWatcher} from './evaluationWatcher.js';
 // Start the watcher.
