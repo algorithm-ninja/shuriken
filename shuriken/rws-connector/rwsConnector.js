@@ -46,7 +46,9 @@ class RwsConnector {
     should(ready).be.true();
 
     // Map user -> taskCodename -> score
-    const users = dataStore.findAll('users');
+    const users = _.filter(dataStore.findAll('users'), function(user) {
+      return _.indexOf(user.roles, 'contestant') !== -1;
+    });
     const contest = dataStore.findOne(
         'contests', 'codename', this._contestCodename);
     if (_.isNil(contest)) {

@@ -1,48 +1,30 @@
 <template name="newSubmissionForm">
-  <div class="row container">
-    <div class="btn-group" role="group">
-      <button id="reset-editor" type="button" class="btn">
-        <i class="material-icons">delete</i> Reset
-      </button>
-      <label class="btn">
-        <input id="file-selector" type="file" style="display:none">
-        <i class="material-icons">file_upload</i> Load file
-      </label>
-    </div>
-    <!-- <span class="btn-separator"></span>
-    <label>
-      Language:
-      <select>
-        <option label="C" value="C">C</option>
-        <option label="C++" value="C++" selected="selected">C++</option>
-        <option label="Pascal" value="Pascal">Pascal</option>
-      </select>
-    </label>
-    <span class="btn-separator"></span> -->
-    <div class="btn-group" role="group">
-      <!-- <div class="btn-group" role="group">
-        <button type="button" class="btn btn-info dropdown-toggle" id="input-chooser" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-          <i class="material-icons">play_arrow</i> Run
-          <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="input-chooser">
-          <li><a href="#">Sample testcase #000</a></li>
-          <li><a href="#">Sample testcase #001</a></li>
-          <li role="separator" class="divider"></li>
-          <li><a href="#">Custom testcase...</a></li>
-        </ul>
-      </div> -->
-      <button id="submit-submission" type="button" class="btn btn-info">
-        <i class="material-icons">send</i> Submit
-      </button>
+  <div class="panel panel-primary" style="margin-bottom: 10px;">
+    <div class="panel-body nopadding">
+      <div class="row nomargin">
+        <div class="btn-group nomargin" role="group">
+          <button id="reset-editor" type="button" class="btn">
+            <i class="material-icons">delete</i> Reset
+          </button>
+          <label class="btn">
+            <input id="file-selector" type="file" style="display:none">
+            <i class="material-icons">file_upload</i> Load file
+          </label>
+        </div>
+        <div class="btn-group nomargin pull-right" role="group">
+          <button id="submit-submission" type="button" class="btn btn-info">
+            <i class="material-icons">send</i> Submit
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="panel panel-primary">
     <div class="panel-body nopadding">
       <div class="row nomargin">
-        <div class="col-md-12 nomargin padding-ns" style="height: 300px;">
-          <div id="ace-editor-{{editorId}}" class="ace-editor">Your code here</div>
+        <div class="col-md-12 nomargin padding-ns" style="height: 350px;">
+          <div id="ace-editor-{{editorId}}" class="ace-editor"></div>
         </div>
       </div>
     </div>

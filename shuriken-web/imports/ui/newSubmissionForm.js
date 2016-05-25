@@ -49,7 +49,7 @@ Template.newSubmissionForm.onRendered(function() {
     self.aceEditor.$blockScrolling = Infinity;
 
     // Restore old code, or set the default one.
-    if (localStorage.getItem(`ace-editor-${self.taskId}`)) {
+    if (!_.isNil(localStorage.getItem(`ace-editor-${self.taskId}`))) {
       self.aceEditor.setValue(
           localStorage.getItem(`ace-editor-${self.taskId}`));
     } else {
