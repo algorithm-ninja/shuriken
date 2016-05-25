@@ -110,14 +110,12 @@ Template.newSubmissionForm.events({
 
   'change #file-selector'(event) {
     const reader = new FileReader();
+    const aceEditor = Template.instance().aceEditor;
 
-    // FIXME: is a closure really needed?
-    reader.onload = function(editor) {
-      return function(e) {
-        editor.setValue(e.target.result);
-        editor.clearSelection();
-      };
-    }(Template.instance().aceEditor);
+    reader.addEventListener('load', event => {
+      aceEditor.setValue(event.target.result);
+      aceEditor.clearSelection();
+    });
 
     reader.readAsText(event.target.files[0]);
 
