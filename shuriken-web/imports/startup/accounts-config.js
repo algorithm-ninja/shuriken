@@ -16,8 +16,7 @@ if (Meteor.isServer) {
   });
 
   Accounts.validateNewUser(function() {
-    //throw new Meteor.Error(403, 'Not authorized to create new users');
-    return true;
+    throw new Meteor.Error(403, 'Not authorized to create new users');
   });
 
   const contestants = [

@@ -9,6 +9,9 @@ import 'ace-builds/src-min-noconflict/ace.js';
 import 'ace-builds/src-min-noconflict/theme-xcode.js';
 import 'ace-builds/src-min-noconflict/mode-c_cpp.js';
 
+// FIXME This should depend on the language.
+const DEFAULT_CODE = '// Write your code here.\n';
+
 /**
  * #### Context
  *
@@ -29,35 +32,43 @@ Template.newSubmissionForm.onCreated(function() {
 });
 
 Template.newSubmissionForm.onRendered(function() {
-  const taskId = Template.currentData().taskId.valueOf();
-  /* jshint -W117 */
-  Template.instance().aceEditor = ace.edit(`ace-editor-${taskId}`);
-  Template.instance().aceEditor.$blockScrolling = Infinity;
+  const self = Template.instance();
 
-  // Restore old code, or set the default one.
-  if (localStorage.getItem(`ace-editor-${taskId}`)) {
-    Template.instance().aceEditor.setValue(
-        localStorage.getItem(`ace-editor-${taskId}`));
-  } else {
-    Template.instance().aceEditor.setValue(`#include <iostream>
-int main() {
-  unsigned int a, b;
-  std::cin >> a >> b;
-  std::cout << a + b << std::endl;
-}`);
-  }
+  // NOTE We need to run the initialization code in an autorun, because of how
+  //      iron-router handles the invalidation of templates. In particular,
+  //      sometimes switching to a different task does not invalidate the old
+  //      template (to avoid flickering), causing some side effects. By wrapping
+  //      the code in an autorun and calling Template.currentData(), we make
+  //      sure that whenever the Template data changes, the editor content is
+  //      refreshed.
+  this.autorun(() => {
+    self.taskId = Template.currentData().taskId.valueOf();
 
-  // Set up change event, to save the code.
-  Template.instance().aceEditor.getSession().on('change', () => {
-    localStorage.setItem(`ace-editor-${taskId}`,
-        // FIXME: maybe we could always just use ace.edit(id) like this:
-        ace.edit(`ace-editor-${taskId}`).getValue());
+    /* jshint -W117 */
+    self.aceEditor = ace.edit(`ace-editor-${self.taskId}`);
+    self.aceEditor.$blockScrolling = Infinity;
+
+    // Restore old code, or set the default one.
+    if (localStorage.getItem(`ace-editor-${self.taskId}`)) {
+      self.aceEditor.setValue(
+          localStorage.getItem(`ace-editor-${self.taskId}`));
+    } else {
+      self.aceEditor.setValue(DEFAULT_CODE);
+    }
+
+    // Aesthetic tweaks.
+    self.aceEditor.setTheme('ace/theme/xcode');
+    self.aceEditor.getSession().setMode('ace/mode/c_cpp');
+    self.aceEditor.clearSelection();
   });
 
-  // Aesthetic tweaks.
-  Template.instance().aceEditor.setTheme('ace/theme/xcode');
-  Template.instance().aceEditor.getSession().setMode('ace/mode/c_cpp');
-  Template.instance().aceEditor.clearSelection();
+  // NOTE We have to take extra care about not attaching multiple event
+  //      listeners to the editor.
+  this.aceEditor.getSession().on('change', function() {
+    // Save editor content to the localStorage.
+    localStorage.setItem(`ace-editor-${self.taskId}`,
+        self.aceEditor.getValue());
+  });
 });
 
 Template.newSubmissionForm.helpers({
@@ -97,8 +108,7 @@ Template.newSubmissionForm.events({
         reset: {
           label: 'Yes, reset',
           callback: () => {
-            localStorage.setItem(`ace-editor-${taskId}`,
-                '// Write your code here.\n');
+            localStorage.setItem(`ace-editor-${taskId}`, DEFAULT_CODE);
 
             aceEditor.setValue(localStorage.getItem(`ace-editor-${taskId}`));
             aceEditor.clearSelection();
