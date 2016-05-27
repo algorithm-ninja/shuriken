@@ -7,6 +7,7 @@ import './contestPageLayout.js';
 import './contestPicker.js';
 import './taskStatementPage.js';
 import './taskSubmissionsPage.js';
+import './loginForm.js';
 import '../styles/material-icons/material-icons.css';
 
 Router.route('/', function () {

@@ -1,0 +1,19 @@
+<template name="loginForm">
+  {{#if currentUser}}
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+      <i class="material-icons">person</i> {{currentUser.username}} <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      <li>
+        <a href="#" id="logout">Logout</a>
+      </li>
+    </ul>
+  {{else}}
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+      <i class="material-icons">person_outline</i> Login <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      <!-- TODO: username / password fiels, "login" and "signup" buttons -->
+    </ul>
+  {{/if}}
+</template>
