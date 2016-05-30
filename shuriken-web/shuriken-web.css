@@ -90,6 +90,16 @@ a.task-link .list-group-item-heading {
   bottom: 0;
 }
 
-.login-buttons:hover {
+.login-buttons:hover, .login-buttons[aria-expanded=true] {
   color: white !important;  /* FIXME: temporary */
+  background-color: #417894 !important;
+  transition-duration: 200ms;
+}
+
+.login-buttons {
+  transition-duration: 200ms;
+}
+
+.login-buttons i {
+  margin-right: 5px;
 }
