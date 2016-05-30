@@ -87,7 +87,10 @@ const should = require('should/as-function');
  * When the evaluation job is finished a score and a message are published.
  * They are published in the form of an object having the following fields:
  * - score: a number in [0, 1],
- * - message: a string.
+ * - message: a string,
+ * - elapsedTime: a number (or null, in case of error),
+ * - memoryPeak: the peak amount of RAM used during execution (or null, in case
+ *               of error).
  *
 **/
 
@@ -201,16 +204,27 @@ class BatchTestcaseEvaluator {
    * @private
    * @param {Number} score The score (\in [0, 1]) for this submission.
    * @param {string} message The message.
+   * @param {Number} elapsedTime The time (in seconds) took to evaluate.
+   * @param {Number} memoryPeak The max amount of memory (in MiBs) used at some
+   *                            point of the evaluation.
    */
-  _publishEvaluation(score, message) {
+  _publishEvaluation(score, message, elapsedTime, memoryPeak) {
     should(score)
         .be.Number()
         .and.be.within(0, 1);
+    should(elapsedTime)
+        .be.Number()
+        .and.be.aboveOrEqual(0);
+    should(memoryPeak)
+        .be.Number()
+        .and.be.aboveOrEqual(0);
     should(message).be.String();
 
     this._resolve({
-        'score': score,
-        'message': message,
+      'score': score,
+      'message': message,
+      'elapsedTime': elapsedTime,
+      'memoryPeak': memoryPeak,
     });
   }
 
@@ -338,7 +352,7 @@ class BatchTestcaseEvaluator {
     });
 
     this._sandbox
-        .timeLimit(this._config.internalTimeLimit * 1000)
+        .timeLimit(this._config.internalTimeLimit)
         .memoryLimit(this._config.internalMemoryLimit);
 
     switch (language) {
@@ -449,7 +463,7 @@ class BatchTestcaseEvaluator {
    */
   _runUserExecutable(executableFilename, language, additionalArgs) {
     this._sandbox
-        .timeLimit(this._config.timeLimit * 1000)
+        .timeLimit(this._config.timeLimit)
         .memoryLimit(this._config.memoryLimit);
 
     return this._runExecutable(executableFilename, language, additionalArgs);
@@ -464,7 +478,7 @@ class BatchTestcaseEvaluator {
    */
   _runInternalExecutable(executableFilename, language, additionalArgs) {
     this._sandbox
-        .timeLimit(this._config.internalTimeLimit * 1000)
+        .timeLimit(this._config.internalTimeLimit)
         .memoryLimit(this._config.internalMemoryLimit);
 
     return this._runExecutable(executableFilename, language, additionalArgs);
@@ -487,7 +501,7 @@ class BatchTestcaseEvaluator {
 
     if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0,
-          'Compilation error, exit code ' + status.status);
+          'Compilation error, exit code ' + status.status, null, null);
     }
 
     // Run contestant solution.
@@ -500,21 +514,19 @@ class BatchTestcaseEvaluator {
         this._config.submissionLanguage);
 
     if (_.isNull(status.status) || !_.isNil(status.error)) {
-      if (status.error.code === 'ETIMEDOUT') {
-        return this._publishEvaluation(0, 'Execution timed out');
-      } else {
-        return this._fail('Exception while executing solution, code ' +
-            status.error.code, status);
-      }
+      return this._fail('Exception while executing solution, code ' +
+          status.error.code, status);
     }
 
     if (!_.isNull(status.status) && status.status !== 0) {
       return this._publishEvaluation(0.0,
-          'Execution failed with exit code ' + status.status);
+          'Execution failed with exit code ' + status.status, status.wallTime,
+          status.memory);
     }
     if (!_.isNull(status.signal) && status.signal !== 0) {
       return this._publishEvaluation(0.0,
-          'Execution killed with signal ' + status.signal);
+          'Execution killed with signal ' + status.signal, status.wallTime,
+          status.memory);
     }
 
     // Check if solution is correct.
@@ -552,9 +564,11 @@ class BatchTestcaseEvaluator {
     }
 
     if (!_.isNull(status.status) && status.status !== 0) {
-      return this._publishEvaluation(0.0, 'Wrong answer');
+      return this._publishEvaluation(0.0, 'Wrong answer', status.wallTime,
+          status.memory);
     } else {
-      return this._publishEvaluation(1.0, 'Correct answer');
+      return this._publishEvaluation(1.0, 'Correct answer', status.wallTime,
+          status.memory);
     }
   }
 

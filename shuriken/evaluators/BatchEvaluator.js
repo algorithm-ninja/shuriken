@@ -339,10 +339,6 @@ class BatchEvaluator {
     //       somewhere else.
     let s = `
       <style>
-        td.tc-score {
-          width: 55px;
-        }
-
         td.tc-score span {
           display: inline-block;
           height: 20px;
@@ -354,11 +350,6 @@ class BatchEvaluator {
           background-color: #ddd;
           text-align: center;
           padding: 0 5px;
-          min-width: 35px;
-        }
-
-        td.tc-index {
-          width: 100px;
         }
 
         tr.subtask {
@@ -373,7 +364,7 @@ class BatchEvaluator {
     `;
 
     let tcRow = (subtaskIndex, testcaseIndex, testcaseEvaluationProgress) => {
-      let message = '', score = '–';
+      let message = '', score = '–', time = '', memory = '';
       switch (testcaseEvaluationProgress.state) {
         case 'unknown':
           message = 'Connecting...';
@@ -391,18 +382,31 @@ class BatchEvaluator {
         case 'complete':
           message = testcaseEvaluationProgress.message;
           score = testcaseEvaluationProgress.score.toFixed(2);
+          time = testcaseEvaluationProgress.elapsedTime;
+          memory = testcaseEvaluationProgress.memoryPeak;
           break;
       }
 
       return mustache.render(`
         <tr class="testcase">
-          <td class="tc-index">Testcase {{testcaseIndex}}</td>
-          <td class="tc-message">{{message}}</td>
-          <td class="tc-score"><span>{{score}}</span></td>
+          <td style="width: 10%">{{subtaskIndex}}.{{testcaseIndex}}</td>
+          <td style="width: 40%">{{message}}</td>
+          <td style="width: 20%">
+            <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">timer</i>
+            {{time}} s
+          </td>
+          <td style="width: 20%">
+            <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">memory</i>
+            {{memory}} MiB
+          </td>
+          <td style="width: 10%" class="tc-score"><span>{{score}}</span></td>
         </tr>`, {
+          'subtaskIndex': subtaskIndex,
           'testcaseIndex': testcaseIndex,
           'message': message,
           'score': score,
+          'time': time,
+          'memory': memory,
         });
     };
 
@@ -413,8 +417,8 @@ class BatchEvaluator {
          ++subtaskIndex) {
       const nTestcasesForSubtask =
           this._config.evaluationStructure[subtaskIndex - 1].nTestcases;
-      s += '    <tr class="subtask"><td colspan="2">Subtask ';
-      s += subtaskIndex + '</td><td></td></tr>\n';
+      s += '    <tr class="subtask"><td colspan="5">Subtask ';
+      s += subtaskIndex + '</td></tr>\n';
       for (let testcaseIndex = 1; testcaseIndex <= nTestcasesForSubtask;
            ++testcaseIndex) {
         const testcaseEvaluationProgress =
@@ -533,7 +537,8 @@ class BatchEvaluator {
                           preventUpdate) {
     should(progress)
         .be.Object()
-        .and.have.properties(['state', 'error', 'score', 'message']);
+        .and.have.properties(['state', 'error', 'score', 'message',
+            'elapsedTime', 'memoryPeak']);
 
     this._testcaseEvaluationProgress[subtaskIndex][testcaseIndex] = progress;
     if (!preventUpdate) {
@@ -562,6 +567,8 @@ class BatchEvaluator {
           error: null,
           score: 0,
           message: 'Connecting...',
+          elapsedTime: null,
+          memoryPeak: null,
         }, true);
       }
     }
@@ -585,14 +592,16 @@ class BatchEvaluator {
       error: null,
       score: 0,
       message: 'In queue',
+      elapsedTime: null,
+      memoryPeak: null,
     });
 
     this._queue.create('subjob', _.clone(testcaseEvaluationConfiguration))
       .on('complete', function(result) {
         should(result)
             .be.Object()
-            .and.have.properties('score')
-            .and.have.properties('message');
+            .and.have.properties(['score', 'message', 'elapsedTime',
+                'memoryPeak']);
         should(result.score)
             .be.Number()
             .and.not.be.Infinity()
@@ -600,12 +609,22 @@ class BatchEvaluator {
             .and.be.belowOrEqual(1);
         should(result.message)
             .be.String();
+        should(result.elapsedTime)
+            .be.Number()
+            .and.not.be.Infinity()
+            .and.be.aboveOrEqual(0);
+        should(result.memoryPeak)
+            .be.Number()
+            .and.not.be.Infinity()
+            .and.be.aboveOrEqual(0);
 
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'complete',
           error: null,
           score: result.score,
           message: result.message,
+          elapsedTime: result.elapsedTime.toFixed(3),
+          memoryPeak: result.memoryPeak.toFixed(2),
         });
       }.bind(this))
       .on('failed', function(error) {
@@ -614,6 +633,8 @@ class BatchEvaluator {
           error: error,
           score: 0.0,
           message: 'Evaluation failed',
+          elapsedTime: null,
+          memoryPeak: null,
         });
       }.bind(this)).save();
   }
