@@ -1,77 +1,82 @@
 <template name="submissionStatus">
-    <div class="panel panel-info">
-      <div class="panel-heading" style="background-color: {{headingColor}};">
-        {{#if isLoaded}}
-          {{#if hasLiveEvaluationForTaskRevisionId}}
-            <span class="panel-title">
-              <i class="material-icons" style="font-size: 20px; vertical-align: top;">
-                {{headingIcon}}
-              </i>
-              {{humanState}} {{#if isLost}}[LOST]{{/if}}
-            </span>
-            <span class="pull-right">{{humanEvaluationDateTime}}</span>
-          {{else}}
-            {{#if hasLiveEvaluation}}
-              <span class="panel-title">
-                <i class="material-icons" style="font-size: 20px; vertical-align: top;">
-                  compare_arrows
-                </i>
-                Outdated
-              </span>
-              <span class="pull-right">{{humanEvaluationDateTime}}</span>
-            {{else}}
-              <i class="material-icons" style="font-size: 20px; vertical-align: top;">
-                error
-              </i>
-              <span class="panel-title">
-                No live evaluation scheduled
-              </span>
-            {{/if}}
-          {{/if}}
-        {{else}}
-          <span class="panel-title"></span>
-        {{/if}}
-      </div>
-      <div class="panel-body nopadding">
-        <div class="row border-between nomargin">
+  <div class="row nomargin">
+    <div class="col-md-11 nopadding">
+      <div class="panel panel-info">
+        <div class="panel-heading" style="background-color: {{headingColor}};">
           {{#if isLoaded}}
             {{#if hasLiveEvaluationForTaskRevisionId}}
-              <div class="col-md-8 evaluation-progress nopadding">
-                {{#if hasProgressData}}
-                  {{{progressData}}}
-                {{else}}
-                  <div style="padding: 5px 5px;">
-                    The worker has not published any progress data.
-                  </div>
-                {{/if}}
-              </div>
-              <div class="col-md-4" style="overflow: auto; padding: 5px 5px;">
-                <div data-submission-id="{{submission._id._str}}" class="btn btn-raised btn-sm shuriken-show-submission-file">
-                  <i class="material-icons">code</i> Show code
-                </div>
-                <p>Job configuration:</p>
-                <div style="font-family: monospace; white-space: pre; font-size: 10px;">
-{{jobConfiguration}}
-                </div>
-              </div>
+              <span class="panel-title">
+                <i class="material-icons" style="font-size: 20px; vertical-align: top;">
+                  {{headingIcon}}
+                </i>
+                {{humanState}} {{#if isLost}}[LOST]{{/if}}
+              </span>
             {{else}}
               {{#if hasLiveEvaluation}}
-                <div class="col-md-12" style="padding: 5px 5px;">
-                  A live evaluation has been scheduled, but it does not match
-                  the current task revision id <tt>{{taskRevision._id._str}}</tt>.
-                </div>
+                <span class="panel-title">
+                  <i class="material-icons" style="font-size: 20px; vertical-align: top;">
+                    compare_arrows
+                  </i>
+                  Outdated
+                </span>
               {{else}}
-                <div class="col-md-12" style="padding: 5px 5px;">
-                  No live evaluation has been scheduled yet.
-                </div>
+                <i class="material-icons" style="font-size: 20px; vertical-align: top;">
+                  error
+                </i>
+                <span class="panel-title">
+                  No live evaluation scheduled
+                </span>
               {{/if}}
             {{/if}}
-          {{else}}
-            <div class="col-md-12" style="padding: 5px 5px;">
-              Loading...
+            <div class="pull-right">
+              <span style="vertical-align: middle;">{{humanSubmissionDateTime}}</span>
             </div>
+          {{else}}
+            <span class="panel-title"></span>
           {{/if}}
+        </div>
+        <div class="panel-body nopadding">
+          <div class="row nomargin">
+            {{#if isLoaded}}
+              {{#if hasLiveEvaluationForTaskRevisionId}}
+                <div class="col-md-12 evaluation-progress nopadding">
+                  {{#if hasProgressData}}
+                    {{{progressData}}}
+                  {{else}}
+                    <div style="padding: 5px 5px;">
+                      The worker has not published any progress data.
+                    </div>
+                  {{/if}}
+                </div>
+              {{else}}
+                {{#if hasLiveEvaluation}}
+                  <div class="col-md-12" style="padding: 5px 5px;">
+                    A live evaluation has been scheduled, but it does not match
+                    the current task revision id <tt>{{taskRevision._id._str}}</tt>.
+                  </div>
+                {{else}}
+                  <div class="col-md-12" style="padding: 5px 5px;">
+                    No live evaluation has been scheduled yet.
+                  </div>
+                {{/if}}
+              {{/if}}
+            {{else}}
+              <div class="col-md-12" style="padding: 5px 5px;">
+                Loading...
+              </div>
+            {{/if}}
+          </div>
         </div>
       </div>
     </div>
+    <div class="col-md-1 nopadding" style="text-align: right;">
+      <div class="btn btn-square shuriken-show-submission-file" style="display: inline-block">
+        <i class="material-icons" style="vertical-align: middle; ">code</i>
+      </div>
+      <div style="height: 10px"></div>
+      <div class="btn btn-square shuriken-show-configuration" style="display: inline-block">
+        <i class="material-icons" style="vertical-align: middle; ">build</i>
+      </div>
+    </div>
+  </div>
 </template>

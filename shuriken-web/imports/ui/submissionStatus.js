@@ -130,25 +130,12 @@ Template.submissionStatus.helpers({
     return _selectLiveEvaluation(this);
   },
 
-  'jobConfiguration'() {
-    if (_hasLiveEvaluation(this)) {
-      const evaluation = _selectLiveEvaluation(this);
-      return JSON.stringify(evaluation.kueData, null, 2);
-    }
-  },
-
-  'humanEvaluationDateTime'() {
-    if (_hasLiveEvaluation(this)) {
-      const evaluation = _selectLiveEvaluation(this);
-
-      //IDEA: in the future, use fromNow() instead of printing the absolute
-      //      dateTime. In order for this to work reactively, .fromNow() should
-      //      invalidate the template on change, via Tracker.
-      return moment(+evaluation.kueCreatedAt).local()
-          .format('D MMM YYYY, HH:mm:ss');
-    } else {
-      return 'Unknown';
-    }
+  'humanSubmissionDateTime'() {
+    //IDEA: in the future, use fromNow() instead of printing the absolute
+    //      dateTime. In order for this to work reactively, .fromNow() should
+    //      invalidate the template on change, via Tracker.
+    return moment(+this.submission.submissionTime).local()
+        .format('D MMM YYYY, HH:mm:ss');
   },
 
   'headingIcon'() {
@@ -266,9 +253,8 @@ Template.submissionStatus.helpers({
 Template.submissionStatus.events({
   'click .shuriken-show-submission-file'(event) {
     event.preventDefault();
-    should(event.currentTarget.dataset.submissionId).be.String();
-    const submissionId = new Meteor.Collection.ObjectID(
-        event.currentTarget.dataset.submissionId);
+
+    const submissionId = this.submission._id;
     Meteor.call('submissions.submissionFileForSubmissionId', submissionId,
         function(err, data) {
       if (!err) {
@@ -285,6 +271,20 @@ Template.submissionStatus.events({
           backdrop: true,
         });
       }
+    });
+  },
+
+  'click .shuriken-show-configuration'(event) {
+    event.preventDefault();
+
+    const evaluation = _selectLiveEvaluation(this);
+    const jobConfiguration = JSON.stringify(evaluation.kueData, null, 2);
+
+    bootbox.alert({
+      title: 'Evaluator configuration',
+      size: 'large',
+      message: `<pre style="max-height: 600px;">${he.escape(jobConfiguration)}</pre>`,
+      backdrop: true,
     });
   }
 });

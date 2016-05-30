@@ -103,3 +103,22 @@ a.task-link .list-group-item-heading {
 .login-buttons i {
   margin-right: 5px;
 }
+
+.btn-square {
+  padding: 0;
+  width: 42px;
+  height: 42px;
+  vertical-align: middle;
+  text-align: middle;
+  background-color: white;
+  border-radius: 2px;
+  border: 0;
+  -webkit-box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.12), 0 1px 6px 0 rgba(0, 0, 0, 0.12) !important;
+          box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.12), 0 1px 6px 0 rgba(0, 0, 0, 0.12) !important;
+  background-color: white !important;
+  margin: 0;
+}
+
+.btn-square i {
+  line-height: 42px;
+}
