@@ -105,7 +105,6 @@ module.exports = class ItalyTaskImporter {
       }
 
       if (line.startsWith('#ST:')) {
-        console.log(this._evaluatorConf.evaluationStructure.length);
         this._evaluatorConf.evaluationStructure.push({
           subtaskValue: parseInt(line.substr(4)),
           nTestcases: 0

@@ -145,21 +145,10 @@ const util = require('util');
  *
  * #### Published result
  *
- * When the evaluation job is finished a score and a message are published.
- * They are published in the form of an object having the following fields:
- * - score: a positive number,
- * - maxScore: the maximum achievable score.
+ * When the evaluation job is finished a score and a message are published. See
+ * the class doc in BatchTestcaseEvaluator.js for a complete list of returned
+ * values.
  *
- * @class
- * @todo Provide a way to specify a baseuri corresponding to phony protocol
- *           shuriken://.
- * @todo Accept timeLimit and memoryLimit as config parameters for the subtasks.
- * @todo Provide a way to configure the connection to Redis (e.g.
- *           authentication).
- * @todo Provide a way to specify a global timeLimit multiplier (via command
- *           line). This is necessary to compensate for different cpu speeds
- *           among the machines running the evaluators, making evaluations
- *           fairer.
  */
 class BatchEvaluator {
   /**
@@ -335,11 +324,13 @@ class BatchEvaluator {
    * @return {string} An HTML representation of the current evaluation status.
    */
   _renderProgressToHtml() {
+    const reportId = `report-${Math.floor(Math.random() * 1e6)}`;
+
     //FIXME: switch to a logic-ful template language, and move the code below
     //       somewhere else.
     let s = `
       <style>
-        td.tc-score span {
+        #${reportId} td.tc-score > span {
           display: inline-block;
           height: 20px;
           line-height: 20px;
@@ -350,21 +341,38 @@ class BatchEvaluator {
           background-color: #ddd;
           text-align: center;
           padding: 0 5px;
+          width: 100%;
         }
 
-        tr.subtask {
+        #${reportId} tr.subtask {
           background-color: #eee;
           text-transform: uppercase;
         }
 
-        tr.subtask td {
+        #${reportId} tr.subtask td {
           padding-bottom: 1px !important;
+        }
+
+        #${reportId} tr.testcase td {
+          vertical-align: middle;
+        }
+
+        #${reportId} td.tc-score > span.solved {
+          background-color: hsla(120, 50%, 50%, 1);
+        }
+
+        #${reportId} td.tc-score > span.unsolved {
+          background-color: hsla(0, 70%, 70%, 1);
+        }
+
+        #${reportId} td.tc-score > span.subsolved {
+          background-color: hsla(60, 70%, 70%, 1);
         }
       </style>
     `;
 
     let tcRow = (subtaskIndex, testcaseIndex, testcaseEvaluationProgress) => {
-      let message = '', score = '–', time = '', memory = '';
+      let message = '', score = null, time = null, memory = null;
       switch (testcaseEvaluationProgress.state) {
         case 'unknown':
           message = 'Connecting...';
@@ -381,10 +389,35 @@ class BatchEvaluator {
           break;
         case 'complete':
           message = testcaseEvaluationProgress.message;
-          score = testcaseEvaluationProgress.score.toFixed(2);
+          score = testcaseEvaluationProgress.score;
           time = testcaseEvaluationProgress.elapsedTime;
           memory = testcaseEvaluationProgress.memoryPeak;
           break;
+      }
+
+      let scoreClass = '';
+      if (_.isNull(score)) {
+        score = '–';
+      } else {
+        score = score.toFixed(2);
+        if (score > 1-1e-2) {
+          scoreClass = 'solved';
+        } else if (score < 1e-2) {
+          scoreClass = 'unsolved';
+        } else {
+          scoreClass = 'subsolved';
+        }
+      }
+
+      if (_.isNull(time)) {
+        time = 'N/A';
+      } else {
+        time = time.toFixed(3);
+      }
+      if (_.isNull(memory)) {
+        memory = 'N/A';
+      } else {
+        memory = memory.toFixed(2);
       }
 
       return mustache.render(`
@@ -399,7 +432,7 @@ class BatchEvaluator {
             <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">memory</i>
             {{memory}} MiB
           </td>
-          <td style="width: 10%" class="tc-score"><span>{{score}}</span></td>
+          <td style="width: 10%" class="tc-score"><span class="${scoreClass}">{{score}}</span></td>
         </tr>`, {
           'subtaskIndex': subtaskIndex,
           'testcaseIndex': testcaseIndex,
@@ -410,7 +443,7 @@ class BatchEvaluator {
         });
     };
 
-    s +=  `<table class="table nomargin">\n`;
+    s +=  `<table id="${reportId}" class="table nomargin">\n`;
     s += `  <tbody>\n`;
     for (let subtaskIndex = 1;
          subtaskIndex <= this._config.evaluationStructure.length;
@@ -609,22 +642,26 @@ class BatchEvaluator {
             .and.be.belowOrEqual(1);
         should(result.message)
             .be.String();
-        should(result.elapsedTime)
-            .be.Number()
-            .and.not.be.Infinity()
-            .and.be.aboveOrEqual(0);
-        should(result.memoryPeak)
-            .be.Number()
-            .and.not.be.Infinity()
-            .and.be.aboveOrEqual(0);
+        if (!_.isNull(result.elapsedTime)) {
+          should(result.elapsedTime)
+              .be.Number()
+              .and.not.be.Infinity()
+              .and.be.aboveOrEqual(0);
+        }
+        if (!_.isNull(result.memoryPeak)) {
+          should(result.memoryPeak)
+              .be.Number()
+              .and.not.be.Infinity()
+              .and.be.aboveOrEqual(0);
+        }
 
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'complete',
           error: null,
           score: result.score,
           message: result.message,
-          elapsedTime: result.elapsedTime.toFixed(3),
-          memoryPeak: result.memoryPeak.toFixed(2),
+          elapsedTime: result.elapsedTime,
+          memoryPeak: result.memoryPeak,
         });
       }.bind(this))
       .on('failed', function(error) {

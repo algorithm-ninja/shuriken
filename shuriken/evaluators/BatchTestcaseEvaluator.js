@@ -204,20 +204,27 @@ class BatchTestcaseEvaluator {
    * @private
    * @param {Number} score The score (\in [0, 1]) for this submission.
    * @param {string} message The message.
-   * @param {Number} elapsedTime The time (in seconds) took to evaluate.
-   * @param {Number} memoryPeak The max amount of memory (in MiBs) used at some
-   *                            point of the evaluation.
+   * @param {?Number} elapsedTime The time (in seconds) took to evaluate. Use
+   *                              null when not appicable.
+   * @param {?Number} memoryPeak The max amount of memory (in MiBs) used at some
+   *                             point of the evaluation. Use null when not
+   *                             applicable.
    */
   _publishEvaluation(score, message, elapsedTime, memoryPeak) {
     should(score)
         .be.Number()
         .and.be.within(0, 1);
-    should(elapsedTime)
-        .be.Number()
-        .and.be.aboveOrEqual(0);
-    should(memoryPeak)
-        .be.Number()
-        .and.be.aboveOrEqual(0);
+    if (!_.isNull(elapsedTime)) {
+      should(elapsedTime)
+          .be.Number()
+          .and.be.aboveOrEqual(0);
+    }
+
+    if (!_.isNull(memoryPeak)) {
+      should(memoryPeak)
+          .be.Number()
+          .and.be.aboveOrEqual(0);
+    }
     should(message).be.String();
 
     this._resolve({

@@ -157,18 +157,13 @@ Template.submissionStatus.helpers({
 
       switch (evaluation.kueState) {
         case 'inactive':
-          if (evaluation.isLost) {
-            return 'remove_circle_outline';
-          } else {
-            return 'change_history';
-          }
-          break;
+          return evaluation.isLost ? 'remove_circle_outline' : 'change_history';
         case 'active':
-          return 'cached';
+          return evaluation.isLost ? 'remove_circle_outline' : 'cached';
         case 'failed':
           return 'error_outline';
         case 'delayed':
-          return 'schedule';
+          return evaluation.isLost ? 'remove_circle_outline' : 'schedule';
         case 'complete':
           return 'done_all';
       }
@@ -248,7 +243,7 @@ Template.submissionStatus.helpers({
         case 'inactive':
           return '#7f7f7f';
         case 'active':
-          return '#03a9f4';
+          return evaluation.isLost ? '#7f7f7f' : '#03a9f4';
         case 'failed':
           return '#7f7f7f';
         case 'complete':
