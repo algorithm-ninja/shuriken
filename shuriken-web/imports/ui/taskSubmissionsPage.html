@@ -3,7 +3,11 @@
     <h1>{{taskTitle}} (<tt>{{routeTaskCodename}}</tt>)</h1>
     <hr>
 
-    {{> newSubmissionForm contestId=routeContest._id taskId=routeTask._id}}
+    <div class="row nomargin nopadding">
+      <div class="col-md-12 nopadding">
+        {{> newSubmissionForm contestId=routeContest._id taskId=routeTask._id}}
+      </div>
+    </div>
 
     <h3>Your past submissions</h3>
     {{#if submissionsLoaded}}
