@@ -89,3 +89,7 @@ a.task-link .list-group-item-heading {
   right: 0;
   bottom: 0;
 }
+
+.login-buttons:hover {
+  color: white !important;  /* FIXME: temporary */
+}
