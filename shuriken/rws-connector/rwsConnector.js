@@ -2,32 +2,49 @@
 
 const _ = require('lodash');
 const http = require('http');
+const indentString = require('indent-string');
 const Queue = require('queue');
 const should = require('should/as-function');
 const url = require('url');
-const ContestDataSubscriber = require('./contestDataSubscriber.js');
+const WebSocket = require('ws');
+
+const DataStore = require('./dataStore.js');
+const ShurikenData = require('./shurikenData.js');
+const DdpWrapper = require('./ddpWrapper.js');
 
 class RwsConnector {
   constructor(contestCodename, shurikenEndpoint, rwsAddress) {
-    let self = this;
-
     this._contestCodename = contestCodename;
     this._shurikenEndpoint = shurikenEndpoint;
     this._rwsAddress = rwsAddress;
     this._throttledOnDataChange =
         _.throttle(this._onDataChange, 250, {trailing: true});
 
-    this._contestDataSubscriber = new ContestDataSubscriber(
-        contestCodename, shurikenEndpoint, function() {
-      if (this.ready()) {
-        self._throttledOnDataChange();
-      }
-    });
+    this._dataStore = new DataStore();
+    const ddpOptions = {
+        endpoint: this._shurikenEndpoint,
+        SocketConstructor: WebSocket,
+    };
+    this._ddp = new DdpWrapper(ddpOptions, this._dataStore);
+    this._ddp.setUser('contest-observer', 'secret');
+    this._shurikenData = new ShurikenData(this._ddp, this._dataStore);
+
     this._requestQueue = new Queue();
     this._requestQueue.concurrency = 1;
 
     this._lastScoreboard = {};
     this._sendContest();
+
+    this._shurikenData.need.allUsers();
+    this._shurikenData.need.allContestTasksAndRevisions(this._contestCodename);
+    this._shurikenData.need.allContestSubmissionsAndLiveEvaluations(
+        this._contestCodename);
+    this._shurikenData.autorun();
+
+    this._ddp.on('documentAdded', () => {this._onDataChange();});
+    this._ddp.on('documentChanged', () => {this._onDataChange();});
+    this._ddp.on('documentRemoved', () => {this._onDataChange();});
+    this._ddp.on('subscriptionReady', () => {this._onDataChange();});
   }
 
   /**
@@ -40,10 +57,7 @@ class RwsConnector {
    * @return {Object}
    */
   _computeScoreboard() {
-    const ready = this._contestDataSubscriber.ready();
-    const dataStore = this._contestDataSubscriber.dataStore();
-
-    should(ready).be.true();
+    const dataStore = this._dataStore;
 
     // Map user -> taskCodename -> score
     const users = _.filter(dataStore.findAll('users'), function(user) {
@@ -71,19 +85,18 @@ class RwsConnector {
         const task = dataStore.findOne('tasks', '_id', taskId);
 
         if (!_.isNil(task)) {
-          taskRevisionIdToTaskCodename[taskRevisionId] = task.codename;
+          taskRevisionIdToTaskCodename[taskRevisionId.$value] = task.codename;
         } else {
-          taskRevisionIdToTaskCodename[taskRevisionId] = undefined;
+          taskRevisionIdToTaskCodename[taskRevisionId.$value] = undefined;
         }
       } else {
-        taskRevisionIdToTaskCodename[taskRevisionId] = undefined;
+        taskRevisionIdToTaskCodename[taskRevisionId.$value] = undefined;
       }
     });
 
-
     if (!_.every(taskRevisionIdToTaskCodename)) {
-      console.warn('[ ### ] Could not update scoreboard: not all task codenames are ' +
-          'available');
+      console.warn('[ ### ] Could not update scoreboard: not all task ' +
+          'codenames are available');
       return;
     }
 
@@ -97,7 +110,8 @@ class RwsConnector {
 
     _.each(taskRevisionIdToTaskCodename, (taskCodename, taskRevisionId) => {
       const evaluations = dataStore.findAll(
-          'evaluations', 'taskRevisionId', taskRevisionId);
+          'evaluations', 'taskRevisionId',
+              {$type: 'oid', $value: taskRevisionId});
       _.each(evaluations, (evaluation) => {
         const submissionId = evaluation.submissionId;
         const isLive = evaluation.isLive;
@@ -164,7 +178,8 @@ class RwsConnector {
         console.warn(`[#####] Request to RWS failed (path: ${path}, ` +
             `code: ${res.statusCode})`);
         console.warn(`[#####] >> Data: ${JSON.stringify(data, null, 2)}`);
-        console.log(`[#####] >> Request header: ${JSON.stringify(res.headers)}`);
+        console.log(
+            `[#####] >> Request header: ${JSON.stringify(res.headers)}`);
         res.setEncoding('utf8');
         res.on('data', function (chunk) {
           console.log(`[#####] >> Body ${chunk}`);
@@ -260,7 +275,12 @@ class RwsConnector {
   }
 
   _onDataChange() {
+    if (!this._shurikenData.allSubscriptionsReady()) {
+      return;
+    }
+
     const scoreboard = this._computeScoreboard();
+    console.log(indentString(JSON.stringify(scoreboard, null, 2), ' ', 8));
     const lastScoreboard = this._lastScoreboard;
 
     const users = _.keys(scoreboard);

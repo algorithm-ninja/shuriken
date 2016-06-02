@@ -8,6 +8,7 @@
     "ddp.js": "^2.1.0",
     "fs-extra": "^0.28.0",
     "hiredis": "^0.4.1",
+    "indent-string": "^2.1.0",
     "js-yaml": "^3.6.1",
     "kue": "algorithm-ninja/kue#events",
     "lodash": "^4.11.1",
