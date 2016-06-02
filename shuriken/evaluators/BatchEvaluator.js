@@ -350,7 +350,8 @@ class BatchEvaluator {
         }
 
         #${reportId} tr.subtask td {
-          padding-bottom: 1px !important;
+          text-align: center;
+          line-height: 5px;
         }
 
         #${reportId} tr.testcase td {
@@ -424,14 +425,8 @@ class BatchEvaluator {
         <tr class="testcase">
           <td style="width: 10%">{{subtaskIndex}}.{{testcaseIndex}}</td>
           <td style="width: 40%">{{message}}</td>
-          <td style="width: 20%">
-            <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">timer</i>
-            {{time}} s
-          </td>
-          <td style="width: 20%">
-            <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">memory</i>
-            {{memory}} MiB
-          </td>
+          <td style="width: 20%">{{time}} s</td>
+          <td style="width: 20%">{{memory}} MiB</td>
           <td style="width: 10%" class="tc-score"><span class="${scoreClass}">{{score}}</span></td>
         </tr>`, {
           'subtaskIndex': subtaskIndex,
@@ -443,8 +438,19 @@ class BatchEvaluator {
         });
     };
 
-    s +=  `<table id="${reportId}" class="table nomargin">\n`;
-    s += `  <tbody>\n`;
+    s += `<table id="${reportId}" class="table nomargin">
+            <tbody>
+              <tr>
+                <th>#</th>
+                <th>Status</th>
+                <th>
+                  <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">timer</i> Time
+                </th>
+                <th>
+                  <i style="font-size: 15pt; vertical-align: middle;" class="material-icons">memory</i> Memory
+                </th>
+                <th>Score</th>
+              </tr>`;
     for (let subtaskIndex = 1;
          subtaskIndex <= this._config.evaluationStructure.length;
          ++subtaskIndex) {
