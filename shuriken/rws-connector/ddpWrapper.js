@@ -144,6 +144,7 @@ module.exports = class DdpWrapper extends EventEmitter {
 
   _handleDisconnectedMessage() {
     this._isConnected = false;
+    this._isLoggedIn = false;
 
     this.emit('disconnected');
   }
