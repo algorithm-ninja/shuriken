@@ -378,6 +378,9 @@ class BatchEvaluator {
         case 'unknown':
           message = 'Connecting...';
           break;
+        case 'active':
+          message = 'Evaluating...';
+          break;
         case 'inactive':
           message = 'In queue';
           break;
@@ -629,7 +632,7 @@ class BatchEvaluator {
     this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
       state: 'inactive',
       error: null,
-      score: 0,
+      score: null,
       message: 'In queue',
       elapsedTime: null,
       memoryPeak: null,
@@ -674,8 +677,18 @@ class BatchEvaluator {
         this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
           state: 'failed',
           error: error,
-          score: 0.0,
+          score: null,
           message: 'Evaluation failed',
+          elapsedTime: null,
+          memoryPeak: null,
+        });
+      }.bind(this))
+      .on('start', function() {
+        this._updateTestcaseProgress(subtaskIndex, testcaseIndex, {
+          state: 'active',
+          error: null,
+          score: null,
+          message: 'Evaluating...',
           elapsedTime: null,
           memoryPeak: null,
         });
