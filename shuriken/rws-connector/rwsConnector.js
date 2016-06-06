@@ -66,7 +66,7 @@ class RwsConnector {
     const contest = dataStore.findOne(
         'contests', 'codename', this._contestCodename);
     if (_.isNil(contest)) {
-      console.warn('[ ### ] Could not update scoreboard: contest is not ready');
+      console.warn('[ ### ] Could not update scoreboard: contest not loaded');
       return;
     }
     const contestId = contest._id;
@@ -279,9 +279,15 @@ class RwsConnector {
       return;
     }
 
-    const scoreboard = this._computeScoreboard();
-    console.log(indentString(JSON.stringify(scoreboard, null, 2), ' ', 8));
     const lastScoreboard = this._lastScoreboard;
+    let scoreboard = {};
+    try {
+      scoreboard = this._computeScoreboard();
+      console.log(indentString(JSON.stringify(scoreboard, null, 2), ' ', 8));
+    } catch (e) {
+      console.error('[  E  ] Error while computing scoreboard');
+      return;
+    }
 
     const users = _.keys(scoreboard);
     const lastUsers = _.keys(lastScoreboard);
