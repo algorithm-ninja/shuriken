@@ -66,8 +66,8 @@ class RwsConnector {
     const contest = dataStore.findOne(
         'contests', 'codename', this._contestCodename);
     if (_.isNil(contest)) {
-      console.warn('[ ### ] Could not update scoreboard: contest not loaded');
-      return;
+      console.error('[ ### ] Could not update scoreboard: contest not loaded');
+      throw new Error('contest not loaded');
     }
     const contestId = contest._id;
     const contestTasks = dataStore.findAll(
@@ -95,9 +95,9 @@ class RwsConnector {
     });
 
     if (!_.every(taskRevisionIdToTaskCodename)) {
-      console.warn('[ ### ] Could not update scoreboard: not all task ' +
+      console.error('[ ### ] Could not update scoreboard: not all task ' +
           'codenames are available');
-      return;
+      throw new Error('Not all task codenames available');
     }
 
     let scoreboard = {};
@@ -127,10 +127,12 @@ class RwsConnector {
               scoreboard[user.username][taskCodename] = Math.max(
                   scoreboard[user.username][taskCodename], score);
             } else {
-              console.warn(`[ ### ] User Id ${userId} not loaded`);
+              console.error(`[ ### ] User Id ${userId} not loaded`);
+              throw new Error('User Id not loaded');
             }
           } else {
-            console.warn(`[ ### ] Submission Id ${submissionId} not loaded`);
+            console.error(`[ ### ] Submission Id ${submissionId} not loaded`);
+            throw new Error('Submission Id not loaded');
           }
         }
       });
@@ -175,9 +177,9 @@ class RwsConnector {
 
     const req = http.request(options, function(res) {
       if (res.statusCode >= 400) {
-        console.warn(`[#####] Request to RWS failed (path: ${path}, ` +
+        console.error(`[#####] Request to RWS failed (path: ${path}, ` +
             `code: ${res.statusCode})`);
-        console.warn(`[#####] >> Data: ${JSON.stringify(data, null, 2)}`);
+        console.error(`[#####] >> Data: ${JSON.stringify(data, null, 2)}`);
         console.log(
             `[#####] >> Request header: ${JSON.stringify(res.headers)}`);
         res.setEncoding('utf8');
