@@ -224,10 +224,13 @@ class RwsConnector {
   }
 
   _sendUserList(users) {
+    const self = this;
     const digestedUsers = _.zipObject(users, _.map(users, (user) => {
+      const userObj = self._dataStore.findOne('users', 'username', user);
+      should(userObj).be.Object();
       return {
-        'f_name': user,
-        'l_name': '',
+        'f_name': userObj.profile.firstName,
+        'l_name': userObj.profile.lastName,
         'team': null,
       };
     }));
