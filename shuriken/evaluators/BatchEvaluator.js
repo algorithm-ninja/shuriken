@@ -388,7 +388,7 @@ class BatchEvaluator {
           message = 'Evaluation failed';
           const error = testcaseEvaluationProgress.error;
           if (!_.isNil(error)) {
-            message += ': ' + error;
+            message += ': ' + JSON.stringify(error);
           }
           break;
         case 'complete':
