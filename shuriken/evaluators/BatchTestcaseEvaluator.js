@@ -164,13 +164,13 @@ class BatchTestcaseEvaluator {
     should(this._config.submissionLanguage)
         .be.String()
         .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
-            'MONO_CSHARP']);
+            'MONO_CSHARP', 'BASH']);
 
     if (this._config.checkerLanguage) {
       should(this._config.checkerLanguage)
           .be.String()
           .and.equalOneOf(['GCC_C', 'GCC_CXX', 'JDK_JAVA', 'CPYTHON_PYTHON3',
-              'MONO_CSHARP']);
+              'MONO_CSHARP', 'BASH']);
     }
 
     if (this._config.checkerSourceUri) {
@@ -397,6 +397,7 @@ class BatchTestcaseEvaluator {
         break;
 
       case 'CPYTHON_PYTHON3':
+      case 'BASH':
         status.executableFilename = relativeEntryPointPath;
         break;
 
@@ -446,6 +447,11 @@ class BatchTestcaseEvaluator {
 
       case 'CPYTHON_PYTHON3':
         status = this._sandbox.run('python3',
+            _.concat([executableFilename], additionalArgs));
+        break;
+
+      case 'BASH':
+        status = this._sandbox.run('bash',
             _.concat([executableFilename], additionalArgs));
         break;
 
