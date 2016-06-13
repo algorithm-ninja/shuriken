@@ -4,7 +4,7 @@
   "dependencies": {
     "ava": "^0.14.0",
     "commander": "^2.9.0",
-    "cotton": "^0.4.0",
+    "cotton": "^0.5.1",
     "ddp.js": "^2.1.0",
     "fs-extra": "^0.28.0",
     "hiredis": "^0.4.1",
