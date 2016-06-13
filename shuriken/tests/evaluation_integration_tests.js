@@ -13,9 +13,8 @@ import task1 from './tasks';
 import QueueMock from './queueMock';
 
 // Destroy the folder when tests are done.
-// temp.track();
+temp.track();
 const tempFolder = temp.mkdirSync('shuriken-tests');
-console.log(tempFolder);
 
 const evaluatorOptions = {
   fileStoreRoot: tempFolder,

@@ -191,7 +191,7 @@ class BatchTestcaseEvaluator {
 
     // Step 5. Create the fileDB and sandbox objects.
     this._fileDB = new FileDB(this._options.fileStoreRoot);
-    this._sandbox = new Sandbox('NamespaceSandbox');
+    this._sandbox = new Sandbox();
 
     // Step 6. Start evaluation.
     this._run();
@@ -369,7 +369,7 @@ class BatchTestcaseEvaluator {
             status.executableFilename,
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        Object.assign(status, this._sandbox.run('/usr/bin/g++', args));
+        Object.assign(status, this._sandbox.run('g++', args));
         break;
 
       case 'GCC_C':
@@ -378,7 +378,7 @@ class BatchTestcaseEvaluator {
             relativeEntryPointPath + '.bin',
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        Object.assign(status, this._sandbox.run('/usr/bin/gcc', args));
+        Object.assign(status, this._sandbox.run('gcc', args));
         break;
 
       case 'JDK_JAVA':
@@ -393,11 +393,10 @@ class BatchTestcaseEvaluator {
         // Remove file extension: http://stackoverflow.com/a/4250408/747654
         status.executableFilename.replace(/\.[^/.]+$/, '');
 
-        Object.assign(status, this._sandbox.run('/usr/bin/javac', args));
+        Object.assign(status, this._sandbox.run('javac', args));
         break;
 
       case 'CPYTHON_PYTHON3':
-      case 'BASH':
         status.executableFilename = relativeEntryPointPath;
         break;
 
@@ -406,7 +405,7 @@ class BatchTestcaseEvaluator {
         args = _.concat(['-out:' + status.executableFilename,
             relativeEntryPointPath], relativeHelperFilePaths);
 
-        Object.assign(status, this._sandbox.run('/usr/bin/mcs', args));
+        Object.assign(status, this._sandbox.run('mcs', args));
         break;
     }
 
@@ -437,26 +436,21 @@ class BatchTestcaseEvaluator {
     switch (language) {
       case 'GCC_CXX':
       case 'GCC_C':
-        status = this._sandbox.run(executableFilename, additionalArgs);
+        status = this._sandbox.runRelative(executableFilename, additionalArgs);
         break;
 
       case 'JDK_JAVA':
-        status = this._sandbox.run('/usr/bin/java',
-            _.concat([executableFilename], additionalArgs));
-        break;
-
-      case 'BASH':
-        status = this._sandbox.run('/bin/bash',
+        status = this._sandbox.run('java',
             _.concat([executableFilename], additionalArgs));
         break;
 
       case 'CPYTHON_PYTHON3':
-        status = this._sandbox.run('/usr/bin/python3',
+        status = this._sandbox.run('python3',
             _.concat([executableFilename], additionalArgs));
         break;
 
       case 'MONO_CSHARP':
-        status = this._sandbox.run('/usr/bin/mono',
+        status = this._sandbox.run('mono',
             _.concat([executableFilename], additionalArgs));
         break;
 
@@ -503,12 +497,6 @@ class BatchTestcaseEvaluator {
    * @private
    */
   _run() {
-    // Mount directories
-    this._sandbox.mountRO('/usr', '/usr');
-    this._sandbox.mountRO('/bin', '/bin');
-    this._sandbox.mountRO('/lib', '/lib');
-    this._sandbox.mountRO('/lib64', '/lib64');
-
     // Compile contestant solution.
     let status = this._compileFile(this._config.submissionFileUri,
         this._config.graderSourceUri,
